@@ -7,17 +7,44 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+function handle401() {
+  localStorage.removeItem("admin_token");
+  // Reload page to reset app state and show login
+  window.location.href = "/admin";
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem("admin_token");
+  if (token) {
+    return { "Authorization": `Bearer ${token}` };
+  }
+  return {};
+}
+
 export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+  };
+  
+  if (data) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
+
+  if (res.status === 401) {
+    handle401();
+    throw new Error("Unauthorized");
+  }
 
   await throwIfResNotOk(res);
   return res;
@@ -31,10 +58,15 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const res = await fetch(queryKey.join("/") as string, {
       credentials: "include",
+      headers: getAuthHeaders(),
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    if (res.status === 401) {
+      handle401();
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+      throw new Error("Unauthorized");
     }
 
     await throwIfResNotOk(res);
