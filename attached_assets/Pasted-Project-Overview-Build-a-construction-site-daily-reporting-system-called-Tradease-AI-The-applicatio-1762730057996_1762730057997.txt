@@ -1,0 +1,1323 @@
+Project Overview
+Build a construction site daily reporting system called Tradease AI. The application allows:
+
+Admins to manage multiple construction company clients
+Site workers to submit daily reports via custom-branded forms (no login required)
+GPT-5 to analyze form data and site photos
+Automatic PDF generation with embedded images
+Email notifications with PDF attachments
+
+Key Requirement: This must be self-contained on Replit. The ONLY external API is OpenAI GPT-5. No Google Docs, no Bunny CDN, no external storage.
+
+Tech Stack
+json{
+  "framework": "Next.js 14 (App Router)",
+  "database": "SQLite with Prisma ORM",
+  "styling": "Tailwind CSS",
+  "pdf": "puppeteer",
+  "images": "sharp",
+  "email": "nodemailer",
+  "ai": "OpenAI GPT-5 API",
+  "auth": "bcryptjs (simple admin auth)"
+}
+```
+
+---
+
+## File Structure
+```
+/tradease-ai
+├── app/
+│   ├── admin/
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   ├── dashboard/
+│   │   │   └── page.tsx
+│   │   ├── clients/
+│   │   │   ├── page.tsx
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx
+│   │   │   └── [id]/
+│   │   │       ├── edit/
+│   │   │       │   └── page.tsx
+│   │   │       └── reports/
+│   │   │           └── page.tsx
+│   │   └── reports/
+│   │       └── [id]/
+│   │           └── page.tsx
+│   ├── form/
+│   │   └── [slug]/
+│   │       └── page.tsx
+│   ├── api/
+│   │   ├── admin/
+│   │   │   ├── auth/
+│   │   │   │   └── route.ts
+│   │   │   └── clients/
+│   │   │       ├── route.ts
+│   │   │       └── [id]/
+│   │   │           └── route.ts
+│   │   ├── reports/
+│   │   │   ├── submit/
+│   │   │   │   └── route.ts
+│   │   │   ├── [id]/
+│   │   │   │   └── route.ts
+│   │   │   └── download/
+│   │   │       └── [id]/
+│   │   │           └── route.ts
+│   │   └── upload/
+│   │       └── route.ts
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── admin/
+│   │   ├── ClientForm.tsx
+│   │   ├── ClientList.tsx
+│   │   ├── ReportList.tsx
+│   │   └── ReportView.tsx
+│   ├── form/
+│   │   ├── SiteReportForm.tsx
+│   │   └── ImageUpload.tsx
+│   └── ui/
+│       ├── button.tsx
+│       ├── input.tsx
+│       ├── textarea.tsx
+│       └── card.tsx
+├── lib/
+│   ├── db.ts (Prisma client)
+│   ├── openai.ts (GPT-5 client)
+│   ├── pdf-generator.ts
+│   ├── email.ts
+│   └── auth.ts
+├── storage/
+│   ├── logos/
+│   ├── images/
+│   └── pdfs/
+├── prisma/
+│   └── schema.prisma
+├── public/
+│   └── default-logo.png
+├── .env.local
+├── package.json
+├── next.config.js
+├── tailwind.config.ts
+└── tsconfig.json
+
+Database Schema (Prisma)
+Create prisma/schema.prisma:
+prismagenerator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Client {
+  id                String   @id @default(uuid())
+  companyName       String
+  contactName       String
+  contactEmail      String
+  notificationEmails Json    // Array of emails
+  logoPath          String?
+  brandColor        String   @default("#1E40AF")
+  formSlug          String   @unique
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  reports           Report[]
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id])
+  reportDate    DateTime
+  projectName   String
+  formData      Json     // All form fields
+  aiAnalysis    Json?    // GPT-5 output
+  pdfPath       String?
+  status        String   @default("processing") // processing, completed, failed
+  submittedAt   DateTime @default(now())
+  processedAt   DateTime?
+  images        Image[]
+}
+
+model Image {
+  id            String   @id @default(uuid())
+  reportId      String
+  report        Report   @relation(fields: [reportId], references: [id])
+  filePath      String
+  fileName      String
+  aiDescription String?
+  imageOrder    Int
+  uploadedAt    DateTime @default(now())
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+Environment Variables
+Create .env.local:
+bash# Database
+DATABASE_URL="file:./prisma/dev.db"
+
+# OpenAI GPT-5
+OPENAI_API_KEY="sk-proj-your-key-here"
+
+# Admin Credentials (will be hashed on first run)
+ADMIN_USERNAME="admin"
+ADMIN_PASSWORD="change-this-password"
+
+# Email SMTP
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_USER="your-email@gmail.com"
+SMTP_PASS="your-app-password"
+SMTP_FROM="noreply@tradease.ai"
+
+# App Config
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+JWT_SECRET="your-super-secret-jwt-key-change-this"
+
+Package.json Dependencies
+json{
+  "name": "tradease-ai",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "prisma:init": "prisma generate && prisma db push"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "@prisma/client": "^5.14.0",
+    "prisma": "^5.14.0",
+    "openai": "^4.47.0",
+    "puppeteer": "^22.10.0",
+    "sharp": "^0.33.4",
+    "nodemailer": "^6.9.13",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8",
+    "react-hook-form": "^7.51.5",
+    "react-dropzone": "^14.2.3",
+    "lucide-react": "^0.379.0",
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.12",
+    "@types/react": "^18.3.2",
+    "@types/react-dom": "^18.3.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/nodemailer": "^6.4.15",
+    "tailwindcss": "^3.4.3",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38"
+  }
+}
+
+Implementation Steps
+STEP 1: Initialize Project
+
+Run npm install to install all dependencies
+Run npx prisma generate to generate Prisma client
+Run npx prisma db push to create SQLite database
+Create storage directories: storage/logos, storage/images, storage/pdfs
+
+STEP 2: Create Database Utilities
+File: lib/db.ts
+typescriptimport { PrismaClient } from '@prisma/client'
+
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+STEP 3: Create Auth Utilities
+File: lib/auth.ts
+typescriptimport bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { prisma } from './db'
+
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 10)
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash)
+}
+
+export function generateToken(adminId: string): string {
+  return jwt.sign({ adminId }, process.env.JWT_SECRET!, { expiresIn: '7d' })
+}
+
+export function verifyToken(token: string): { adminId: string } | null {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET!) as { adminId: string }
+  } catch {
+    return null
+  }
+}
+
+export async function initializeAdmin() {
+  const existingAdmin = await prisma.admin.findFirst()
+  if (!existingAdmin) {
+    const passwordHash = await hashPassword(process.env.ADMIN_PASSWORD!)
+    await prisma.admin.create({
+      data: {
+        username: process.env.ADMIN_USERNAME!,
+        passwordHash
+      }
+    })
+    console.log('✅ Admin user created')
+  }
+}
+STEP 4: Create OpenAI Client
+File: lib/openai.ts
+typescriptimport OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+})
+
+export async function analyzeReport(formData: any, imageBase64Array: string[]) {
+  const prompt = `You are a construction site documentation assistant. Using the provided JSON data and site photos, create a professional daily site report in a consistent JSON structure.
+
+**INPUT DATA:**
+Date: ${formData.reportDate}
+Project: ${formData.projectName}
+Works Performed: ${formData.worksPerformed}
+Labour on Site: ${formData.labourOnSite}
+Plant & Machinery: ${formData.plantMachinery}
+Hours Worked: ${formData.hoursWorked}
+Materials Used: ${formData.materialsUsed}
+Delays/Weather: ${formData.delaysWeather}
+Safety Incidents: ${formData.safetyIncidents}
+
+**IMAGES:**
+${imageBase64Array.length} site photos are attached showing today's works.
+
+**TASK:**
+Analyze the data and images, then output a structured JSON report following this exact schema:
+
+{
+  "report_metadata": {
+    "project_name": "",
+    "report_date": "",
+    "report_id": ""
+  },
+  "site_conditions": {
+    "weather": "",
+    "temperature": ""
+  },
+  "workforce": {
+    "total_workers": 0,
+    "worker_names": [],
+    "total_hours": 0,
+    "man_hours": 0
+  },
+  "works_summary": {
+    "title": "",
+    "description": "",
+    "key_activities": []
+  },
+  "materials": {
+    "items_used": [
+      {
+        "material": "",
+        "quantity": "",
+        "unit": ""
+      }
+    ]
+  },
+  "plant_equipment": {
+    "equipment_used": []
+  },
+  "quality_compliance": {
+    "compliance_status": ""
+  },
+  "safety_incidents": {
+    "incidents_reported": [],
+    "safety_observations": ""
+  },
+  "delays_issues": {
+    "delays": [],
+    "impact": ""
+  },
+  "photo_documentation": {
+    "total_images": 0,
+    "image_descriptions": []
+  },
+  "next_day_plan": {
+    "scheduled_works": []
+  }
+}
+
+**INSTRUCTIONS:**
+1. Use relevant construction standards in accordance with VicRoads Standard Documents
+2. Extract all relevant information from the JSON data
+3. Analyze each photo and describe what it shows (e.g., "Installed SL72 mesh with bar chairs visible")
+4. Infer logical next-day activities based on works performed
+5. Use professional construction terminology
+6. Calculate man_hours (total_workers × total_hours)
+7. For report_id, use format: {PROJECT}_{DATE}_DR
+8. Return ONLY valid JSON, no additional text or explanation`
+
+  const messages: any[] = [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: prompt },
+        ...imageBase64Array.map(base64 => ({
+          type: 'image_url',
+          image_url: { url: `data:image/jpeg;base64,${base64}` }
+        }))
+      ]
+    }
+  ]
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-5', // MUST BE GPT-5
+    max_tokens: 20000,
+    temperature: 0.3,
+    messages
+  })
+
+  const content = response.choices[0].message.content
+  if (!content) throw new Error('No response from GPT-5')
+
+  // Parse JSON response
+  const jsonMatch = content.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Invalid JSON response from GPT-5')
+
+  return JSON.parse(jsonMatch[0])
+}
+STEP 5: Create PDF Generator
+File: lib/pdf-generator.ts
+typescriptimport puppeteer from 'puppeteer'
+import fs from 'fs/promises'
+import path from 'path'
+
+export async function generatePDF(
+  reportData: any,
+  aiAnalysis: any,
+  client: any,
+  images: any[]
+): Promise<string> {
+  const html = generateReportHTML(reportData, aiAnalysis, client, images)
+  
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  })
+  
+  const page = await browser.newPage()
+  await page.setContent(html, { waitUntil: 'networkidle0' })
+  
+  const pdfDir = path.join(process.cwd(), 'storage', 'pdfs', client.id)
+  await fs.mkdir(pdfDir, { recursive: true })
+  
+  const pdfPath = path.join(pdfDir, `${reportData.id}.pdf`)
+  
+  await page.pdf({
+    path: pdfPath,
+    format: 'A4',
+    printBackground: true,
+    margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' }
+  })
+  
+  await browser.close()
+  
+  return pdfPath
+}
+
+function generateReportHTML(reportData: any, aiAnalysis: any, client: any, images: any[]): string {
+  const logoPath = client.logoPath 
+    ? `file://${path.join(process.cwd(), client.logoPath)}`
+    : ''
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: Arial, Helvetica, sans-serif; 
+      font-size: 11pt;
+      line-height: 1.6;
+      color: #333;
+    }
+    .header {
+      text-align: center;
+      padding: 20px 0;
+      border-bottom: 3px solid ${client.brandColor};
+      margin-bottom: 30px;
+    }
+    .logo { max-width: 150px; margin-bottom: 15px; }
+    h1 { 
+      color: ${client.brandColor}; 
+      font-size: 24pt; 
+      margin-bottom: 10px;
+    }
+    .meta { 
+      font-size: 10pt; 
+      color: #666; 
+      margin-bottom: 5px;
+    }
+    h2 { 
+      color: ${client.brandColor}; 
+      font-size: 14pt; 
+      margin-top: 25px; 
+      margin-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 5px;
+    }
+    h3 { 
+      color: #555; 
+      font-size: 12pt; 
+      margin-top: 15px; 
+      margin-bottom: 8px;
+    }
+    p { margin-bottom: 10px; }
+    ul { margin-left: 20px; margin-bottom: 10px; }
+    li { margin-bottom: 5px; }
+    .grid { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 20px; 
+      margin-bottom: 20px;
+    }
+    .box {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 4px solid ${client.brandColor};
+    }
+    .photo-section {
+      margin-top: 30px;
+      page-break-before: always;
+    }
+    .photo {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .photo img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .photo-caption {
+      font-size: 10pt;
+      color: #666;
+      font-style: italic;
+      margin-top: 8px;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 15px;
+      border-top: 1px solid #ddd;
+      font-size: 9pt;
+      color: #999;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    ${logoPath ? `<img src="${logoPath}" alt="Logo" class="logo">` : ''}
+    <h1>DAILY SITE REPORT</h1>
+    <div class="meta">${client.companyName}</div>
+    <div class="meta">Project: ${aiAnalysis.report_metadata.project_name}</div>
+    <div class="meta">Date: ${aiAnalysis.report_metadata.report_date}</div>
+    <div class="meta">Report ID: ${aiAnalysis.report_metadata.report_id}</div>
+  </div>
+
+  <div class="grid">
+    <div class="box">
+      <h3>Site Conditions</h3>
+      <p><strong>Weather:</strong> ${aiAnalysis.site_conditions.weather}</p>
+      <p><strong>Temperature:</strong> ${aiAnalysis.site_conditions.temperature}</p>
+    </div>
+    <div class="box">
+      <h3>Workforce Summary</h3>
+      <p><strong>Total Workers:</strong> ${aiAnalysis.workforce.total_workers}</p>
+      <p><strong>Total Hours:</strong> ${aiAnalysis.workforce.total_hours}</p>
+      <p><strong>Man Hours:</strong> ${aiAnalysis.workforce.man_hours}</p>
+    </div>
+  </div>
+
+  <h2>Works Performed Today</h2>
+  <p>${aiAnalysis.works_summary.description}</p>
+  ${aiAnalysis.works_summary.key_activities.length > 0 ? `
+  <h3>Key Activities:</h3>
+  <ul>
+    ${aiAnalysis.works_summary.key_activities.map((act: string) => `<li>${act}</li>`).join('')}
+  </ul>
+  ` : ''}
+
+  ${aiAnalysis.workforce.worker_names.length > 0 ? `
+  <h2>Personnel On Site</h2>
+  <ul>
+    ${aiAnalysis.workforce.worker_names.map((name: string) => `<li>${name}</li>`).join('')}
+  </ul>
+  ` : ''}
+
+  ${aiAnalysis.materials.items_used.length > 0 ? `
+  <h2>Materials Used</h2>
+  <ul>
+    ${aiAnalysis.materials.items_used.map((item: any) => 
+      `<li>${item.material}: ${item.quantity} ${item.unit}</li>`
+    ).join('')}
+  </ul>
+  ` : ''}
+
+  ${aiAnalysis.plant_equipment.equipment_used.length > 0 ? `
+  <h2>Plant & Equipment</h2>
+  <ul>
+    ${aiAnalysis.plant_equipment.equipment_used.map((eq: string) => `<li>${eq}</li>`).join('')}
+  </ul>
+  ` : ''}
+
+  <h2>Safety & Compliance</h2>
+  <p><strong>Compliance Status:</strong> ${aiAnalysis.quality_compliance.compliance_status}</p>
+  ${aiAnalysis.safety_incidents.safety_observations ? `
+  <p><strong>Safety Observations:</strong> ${aiAnalysis.safety_incidents.safety_observations}</p>
+  ` : ''}
+  ${aiAnalysis.safety_incidents.incidents_reported.length > 0 ? `
+  <h3>Incidents Reported:</h3>
+  <ul>
+    ${aiAnalysis.safety_incidents.incidents_reported.map((inc: string) => `<li>${inc}</li>`).join('')}
+  </ul>
+  ` : ''}
+
+  ${aiAnalysis.delays_issues.delays.length > 0 || aiAnalysis.delays_issues.impact ? `
+  <h2>Delays & Issues</h2>
+  ${aiAnalysis.delays_issues.impact ? `<p>${aiAnalysis.delays_issues.impact}</p>` : ''}
+  ${aiAnalysis.delays_issues.delays.length > 0 ? `
+  <ul>
+    ${aiAnalysis.delays_issues.delays.map((delay: string) => `<li>${delay}</li>`).join('')}
+  </ul>
+  ` : ''}
+  ` : ''}
+
+  ${images.length > 0 ? `
+  <div class="photo-section">
+    <h2>Site Photos (${images.length})</h2>
+    ${images.map((img, idx) => {
+      const imgPath = `file://${path.join(process.cwd(), img.filePath)}`
+      const description = aiAnalysis.photo_documentation.image_descriptions[idx]?.description || 
+                         img.aiDescription || 
+                         `Site photo ${idx + 1}`
+      return `
+      <div class="photo">
+        <img src="${imgPath}" alt="Site photo ${idx + 1}">
+        <div class="photo-caption">${description}</div>
+      </div>
+      `
+    }).join('')}
+  </div>
+  ` : ''}
+
+  ${aiAnalysis.next_day_plan.scheduled_works.length > 0 ? `
+  <h2>Next Day Plan</h2>
+  <ul>
+    ${aiAnalysis.next_day_plan.scheduled_works.map((work: string) => `<li>${work}</li>`).join('')}
+  </ul>
+  ` : ''}
+
+  <div class="footer">
+    <p>Generated by Tradease AI on ${new Date().toLocaleString('en-AU')}</p>
+  </div>
+</body>
+</html>
+  `
+}
+STEP 6: Create Email Service
+File: lib/email.ts
+typescriptimport nodemailer from 'nodemailer'
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT!),
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
+})
+
+export async function sendReportEmail(
+  client: any,
+  reportData: any,
+  aiAnalysis: any,
+  pdfPath: string
+) {
+  const emails = Array.isArray(client.notificationEmails) 
+    ? client.notificationEmails 
+    : JSON.parse(client.notificationEmails)
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM,
+    to: emails.join(', '),
+    subject: `New Site Report - ${aiAnalysis.report_metadata.project_name} - ${aiAnalysis.report_metadata.report_date}`,
+    html: `
+      <h2>New Daily Site Report Submitted</h2>
+      <p>Hi ${client.contactName},</p>
+      <p>A new daily site report has been submitted for <strong>${aiAnalysis.report_metadata.project_name}</strong>.</p>
+      
+      <h3>Report Summary:</h3>
+      <ul>
+        <li><strong>Date:</strong> ${aiAnalysis.report_metadata.report_date}</li>
+        <li><strong>Workers on site:</strong> ${aiAnalysis.workforce.total_workers}</li>
+        <li><strong>Man hours:</strong> ${aiAnalysis.workforce.man_hours}</li>
+        <li><strong>Photos:</strong> ${aiAnalysis.photo_documentation.total_images}</li>
+      </ul>
+
+      <h3>Key Activities:</h3>
+      <ul>
+        ${aiAnalysis.works_summary.key_activities.map((act: string) => `<li>${act}</li>`).join('')}
+      </ul>
+
+      <p>The full PDF report is attached to this email.</p>
+
+      <hr>
+      <p style="font-size: 12px; color: #999;">
+        Tradease AI - Automated Site Reporting<br>
+        Submitted: ${new Date().toLocaleString('en-AU')}
+      </p>
+    `,
+    attachments: [
+      {
+        filename: `${aiAnalysis.report_metadata.report_id}.pdf`,
+        path: pdfPath
+      }
+    ]
+  }
+
+  await transporter.sendMail(mailOptions)
+}
+STEP 7: Create API Routes
+File: app/api/admin/auth/route.ts
+typescriptimport { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { verifyPassword, generateToken, initializeAdmin } from '@/lib/auth'
+
+export async function POST(req: NextRequest) {
+  try {
+    await initializeAdmin() // Ensure admin exists
+
+    const { username, password } = await req.json()
+
+    const admin = await prisma.admin.findUnique({
+      where: { username }
+    })
+
+    if (!admin || !(await verifyPassword(password, admin.passwordHash))) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      )
+    }
+
+    const token = generateToken(admin.id)
+
+    return NextResponse.json({ token, admin: { id: admin.id, username: admin.username } })
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Login failed' },
+      { status: 500 }
+    )
+  }
+}
+File: app/api/admin/clients/route.ts
+typescriptimport { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import fs from 'fs/promises'
+import path from 'path'
+
+// GET all clients
+export async function GET(req: NextRequest) {
+  try {
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { reports: true }
+        }
+      }
+    })
+    return NextResponse.json(clients)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
+  }
+}
+
+// POST new client
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData()
+    
+    const companyName = formData.get('companyName') as string
+    const contactName = formData.get('contactName') as string
+    const contactEmail = formData.get('contactEmail') as string
+    const notificationEmails = JSON.parse(formData.get('notificationEmails') as string)
+    const brandColor = formData.get('brandColor') as string
+    const logo = formData.get('logo') as File | null
+
+    // Generate unique slug
+    const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '') + Math.random().toString(36).substr(2, 4)
+
+    let logoPath: string | undefined
+
+    if (logo) {
+      const bytes = await logo.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+      
+      const logoDir = path.join(process.cwd(), 'storage', 'logos')
+      await fs.mkdir(logoDir, { recursive: true })
+      
+      logoPath = path.join('storage', 'logos', `${slug}.png`)
+      await fs.writeFile(path.join(process.cwd(), logoPath), buffer)
+    }
+
+    const client = await prisma.client.create({
+      data: {
+        companyName,
+        contactName,
+        contactEmail,
+        notificationEmails,
+        brandColor,
+        formSlug: slug,
+        logoPath
+      }
+    })
+
+    return NextResponse.json(client)
+  } catch (error) {
+    console.error(error)
+    return NextResponse.json({ error: 'Failed to create client' }, { status: 500 })
+  }
+}
+File: app/api/reports/submit/route.ts
+typescriptimport { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { analyzeReport } from '@/lib/openai'
+import { generatePDF } from '@/lib/pdf-generator'
+import { sendReportEmail } from '@/lib/email'
+import sharp from 'sharp'
+import fs from 'fs/promises'
+import path from 'path'
+
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData()
+
+    const clientId = formData.get('clientId') as string
+    const projectName = formData.get('projectName') as string
+    const reportDate = formData.get('reportDate') as string
+    const worksPerformed = formData.get('worksPerformed') as string
+    const labourOnSite = formData.get('labourOnSite') as string
+    const plantMachinery = formData.get('plantMachinery') as string
+    const hoursWorked = formData.get('hoursWorked') as string
+    const materialsUsed = formData.get('materialsUsed') as string
+    const delaysWeather = formData.get('delaysWeather') as string
+    const safetyIncidents = formData.get('safetyIncidents') as string
+
+    // Get client
+    const client = await prisma.client.findUnique({
+      where: { id: clientId }
+    })
+
+    if (!client) {
+      return NextResponse.json({ error: 'Client not found' }, { status: 404 })
+    }
+
+    // Create report record
+    const report = await prisma.report.create({
+      data: {
+        clientId,
+        projectName,
+        reportDate: new Date(reportDate),
+        formData: {
+          projectName,
+          reportDate,
+          worksPerformed,
+          labourOnSite,
+          plantMachinery,
+          hoursWorked,
+          materialsUsed,
+          delaysWeather,
+          safetyIncidents
+        },
+        status: 'processing'
+      }
+    })
+
+    // Process images
+    const images: any[] = []
+    const imageBase64Array: string[] = []
+    
+    for (let i = 0; i < 5; i++) {
+      const imageFile = formData.get(`image${i}`) as File | null
+      if (!imageFile) continue
+
+      const bytes = await imageFile.arrayBuffer()
+      const buffer = Buffer.from(bytes)
+
+      // Resize image
+      const resizedBuffer = await sharp(buffer)
+        .resize(2048, 2048, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 85 })
+        .toBuffer()
+
+      // Save to storage
+      const imageDir = path.join(process.cwd(), 'storage', 'images', report.id)
+      await fs.mkdir(imageDir, { recursive: true })
+      
+      const fileName = `image_${i}.jpg`
+      const filePath = path.join('storage', 'images', report.id, fileName)
+      await fs.writeFile(path.join(process.cwd(), filePath), resizedBuffer)
+
+      // Create image record
+      const image = await prisma.image.create({
+        data: {
+          reportId: report.id,
+          filePath,
+          fileName,
+          imageOrder: i
+        }
+      })
+
+      images.push(image)
+      imageBase64Array.push(resizedBuffer.toString('base64'))
+    }
+
+    // Call GPT-5 for analysis
+    const aiAnalysis = await analyzeReport(
+      {
+        projectName,
+        reportDate,
+        worksPerformed,
+        labourOnSite,
+        plantMachinery,
+        hoursWorked,
+        materialsUsed,
+        delaysWeather,
+        safetyIncidents
+      },
+      imageBase64Array
+    )
+
+    // Update image descriptions from AI
+    for (let i = 0; i < images.length; i++) {
+      const description = aiAnalysis.photo_documentation.image_descriptions[i]?.description
+      if (description) {
+        await prisma.image.update({
+          where: { id: images[i].id },
+          data: { aiDescription: description }
+        })
+        images[i].aiDescription = description
+      }
+    }
+
+    // Generate PDF
+    const pdfPath = await generatePDF(report, aiAnalysis, client, images)
+
+    // Update report with AI analysis and PDF path
+    await prisma.report.update({
+      where: { id: report.id },
+      data: {
+        aiAnalysis,
+        pdfPath,
+        status: 'completed',
+        processedAt: new Date()
+      }
+    })
+
+    // Send email notification
+    await sendReportEmail(client, report, aiAnalysis, pdfPath)
+
+    return NextResponse.json({
+      success: true,
+      reportId: report.id,
+      message: 'Report submitted and processed successfully'
+    })
+
+  } catch (error) {
+    console.error('Report submission error:', error)
+    return NextResponse.json(
+      { error: 'Failed to process report', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+STEP 8: Create Frontend Components
+File: components/form/SiteReportForm.tsx
+typescript'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import ImageUpload from './ImageUpload'
+
+export default function SiteReportForm({ client }: { client: any }) {
+  const router = useRouter()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [images, setImages] = useState<File[]>([])
+  const [formData, setFormData] = useState({
+    projectName: '',
+    reportDate: new Date().toISOString().split('T')[0],
+    worksPerformed: '',
+    labourOnSite: '',
+    plantMachinery: '',
+    hoursWorked: '',
+    materialsUsed: '',
+    delaysWeather: '',
+    safetyIncidents: ''
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    const data = new FormData()
+    data.append('clientId', client.id)
+    Object.entries(formData).forEach(([key, value]) => {
+      data.append(key, value)
+    })
+    images.forEach((img, idx) => {
+      data.append(`image${idx}`, img)
+    })
+
+    try {
+      const res = await fetch('/api/reports/submit', {
+        method: 'POST',
+        body: data
+      })
+
+      if (res.ok) {
+        const result = await res.json()
+        alert('Report submitted successfully!')
+        router.push(`/report/submitted?id=${result.reportId}`)
+      } else {
+        alert('Failed to submit report')
+      }
+    } catch (error) {
+      alert('Error submitting report')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-8">
+        {/* Header with logo */}
+        <div className="text-center mb-8">
+          {client.logoPath && (
+            <img 
+              src={`/${client.logoPath}`} 
+              alt={client.companyName}
+              className="mx-auto h-20 mb-4"
+            />
+          )}
+          <h1 
+            className="text-3xl font-bold mb-2"
+            style={{ color: client.brandColor }}
+          >
+            Daily Site Report
+          </h1>
+          <p className="text-gray-600">{client.companyName}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Project Name *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.projectName}
+              onChange={e => setFormData({...formData, projectName: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Report Date *
+            </label>
+            <input
+              type="date"
+              required
+              value={formData.reportDate}
+              onChange={e => setFormData({...formData, reportDate: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Works Performed *
+            </label>
+            <textarea
+              required
+              rows={5}
+              maxLength={500}
+              value={formData.worksPerformed}
+              onChange={e => setFormData({...formData, worksPerformed: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Describe the works performed today..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Labour on Site
+            </label>
+            <textarea
+              rows={3}
+              value={formData.labourOnSite}
+              onChange={e => setFormData({...formData, labourOnSite: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Names and roles of workers..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Plant & Machinery
+            </label>
+            <textarea
+              rows={3}
+              value={formData.plantMachinery}
+              onChange={e => setFormData({...formData, plantMachinery: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Equipment used on site..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Hours Worked
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={formData.hoursWorked}
+              onChange={e => setFormData({...formData, hoursWorked: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Materials Used
+            </label>
+            <textarea
+              rows={4}
+              value={formData.materialsUsed}
+              onChange={e => setFormData({...formData, materialsUsed: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="List materials with quantities..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Delays / Weather
+            </label>
+            <textarea
+              rows={3}
+              value={formData.delaysWeather}
+              onChange={e => setFormData({...formData, delaysWeather: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Any delays or weather conditions..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Safety Incidents
+            </label>
+            <textarea
+              rows={3}
+              value={formData.safetyIncidents}
+              onChange={e => setFormData({...formData, safetyIncidents: e.target.value})}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="Report any incidents or safety observations..."
+            />
+          </div>
+
+          <ImageUpload 
+            images={images}
+            setImages={setImages}
+            maxImages={5}
+            brandColor={client.brandColor}
+          />
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full py-3 rounded-lg text-white font-semibold disabled:opacity-50"
+            style={{ backgroundColor: client.brandColor }}
+          >
+            {isSubmitting ? 'Processing Report...' : 'Submit Report'}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+File: app/form/[slug]/page.tsx
+typescriptimport { prisma } from '@/lib/db'
+import { notFound } from 'next/navigation'
+import SiteReportForm from '@/components/form/SiteReportForm'
+
+export default async function FormPage({ params }: { params: { slug: string } }) {
+  const client = await prisma.client.findUnique({
+    where: { formSlug: params.slug, active: true }
+  })
+
+  if (!client) {
+    notFound()
+  }
+
+  return <SiteReportForm client={client} />
+}
+STEP 9: Create Admin Dashboard
+File: app/admin/dashboard/page.tsx
+typescriptimport { prisma } from '@/lib/db'
+import Link from 'next/link'
+
+export default async function AdminDashboard() {
+  const stats = await Promise.all([
+    prisma.client.count(),
+    prisma.report.count(),
+    prisma.report.count({ where: { status: 'completed' } }),
+    prisma.report.count({ where: { status: 'processing' } })
+  ])
+
+  const recentReports = await prisma.report.findMany({
+    take: 10,
+    orderBy: { submittedAt: 'desc' },
+    include: { client: true }
+  })
+
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+      <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="text-gray-500 text-sm">Total Clients</div>
+          <div className="text-3xl font-bold">{stats[0]}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="text-gray-500 text-sm">Total Reports</div>
+          <div className="text-3xl font-bold">{stats[1]}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="text-green-500 text-sm">Completed</div>
+          <div className="text-3xl font-bold">{stats[2]}</div>
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="text-yellow-500 text-sm">Processing</div>
+          <div className="text-3xl font-bold">{stats[3]}</div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold mb-4">Recent Reports</h2>
+        <table className="w-full">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2">Date</th>
+              <th className="text-left py-2">Client</th>
+              <th className="text-left py-2">Project</th>
+              <th className="text-left py-2">Status</th>
+              <th className="text-left py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentReports.map(report => (
+              <tr key={report.id} className="border-b">
+                <td className="py-2">{new Date(report.reportDate).toLocaleDateString()}</td>
+                <td>{report.client.companyName}</td>
+                <td>{report.projectName}</td>
+                <td>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    report.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {report.status}
+                  </span>
+                </td>
+                <td>
+                  <Link 
+                    href={`/admin/reports/${report.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    View
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+Key Instructions for Replit Agent
+
+Install all dependencies from package.json
+Initialize Prisma: Run npx prisma generate && npx prisma db push
+Create storage directories: storage/logos, storage/images, storage/pdfs
+Set environment variables in Replit Secrets
+Test the admin login at /admin/login (username: admin, password from env)
+Create a test client through the admin panel
+Test form submission at /form/{slug}
+Verify PDF generation works correctly
+Test email sending (may need to configure SMTP)
+
+Critical Requirements
+
+✅ GPT-5 API MUST be used (model: "gpt-5")
+✅ All files stored on Replit (no external storage)
+✅ Mobile-responsive form for on-site use
+✅ PDF includes embedded images
+✅ Email notifications work
+✅ Admin can manage multiple clients
+✅ Each client has custom branding
+
+Testing Checklist
+
+ Admin login works
+ Create client with logo upload
+ Form loads with client branding
+ Submit report with 3 images
+ GPT-5 analysis completes
+ PDF generates with images
+ Email sent with PDF attachment
+ View report in admin panel
+ Download PDF works
+ Mobile form is usable
+
+
+Build this complete application now. Start with database setup, then backend APIs, then frontend components.
