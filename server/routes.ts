@@ -112,6 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let fileWriteSuccess = false;
           try {
             await sharp(file.buffer)
+              .rotate() // Auto-rotate based on EXIF orientation
               .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
               .jpeg({ quality: 85 })
               .toFile(filePath);
