@@ -80,7 +80,10 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
             <thead className="bg-muted/50">
               <tr className="border-b">
                 <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Date
+                  Report Date
+                </th>
+                <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                  Submitted
                 </th>
                 <th className="text-left px-6 py-3 text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Client
@@ -109,6 +112,16 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                       <span className="font-medium" data-testid={`text-date-${report.id}`}>
                         {format(new Date(report.reportDate), "MMM dd, yyyy")}
                       </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm">
+                      <div className="font-medium" data-testid={`text-submitted-date-${report.id}`}>
+                        {format(new Date(report.submittedAt), "MMM dd, yyyy")}
+                      </div>
+                      <div className="text-muted-foreground" data-testid={`text-submitted-time-${report.id}`}>
+                        {format(new Date(report.submittedAt), "h:mm a")}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -195,7 +208,10 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>{format(new Date(report.reportDate), "MMM dd, yyyy")}</span>
+                    <span>Report: {format(new Date(report.reportDate), "MMM dd, yyyy")}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground pl-6">
+                    Submitted: {format(new Date(report.submittedAt), "MMM dd, yyyy 'at' h:mm a")}
                   </div>
                   <h3 className="font-semibold truncate">{report.projectName}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
