@@ -109,16 +109,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const filePath = path.join('storage', 'images', fileName);
 
           // Try to process with Sharp for optimization, fallback to raw save if it fails
+          let fileWriteSuccess = false;
           try {
             await sharp(file.buffer)
               .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
               .jpeg({ quality: 85 })
               .toFile(filePath);
+            fileWriteSuccess = true;
           } catch (sharpError) {
             console.warn(`Sharp processing failed for image ${i}, saving raw file:`, sharpError);
             // Fallback: save raw buffer directly
             const fs = await import('fs/promises');
             await fs.writeFile(filePath, file.buffer);
+            fileWriteSuccess = true;
+          }
+
+          // Only create database record if file was actually written
+          if (!fileWriteSuccess) {
+            throw new Error(`Failed to write image file ${i} to disk`);
           }
 
           // Convert to base64 for GPT-5
@@ -126,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageBase64Array.push(base64);
           imagePaths.push(filePath);
 
-          // Save image record
+          // Save image record ONLY if file write succeeded
           await storage.createImage({
             reportId: report.id,
             filePath,
@@ -135,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageOrder: i,
           });
         } catch (imageError) {
-          console.error(`Error processing image ${i}:`, imageError);
+          console.error(`CRITICAL: Error processing image ${i} for report ${report.id}:`, imageError);
           // Continue processing other images even if one fails
         }
       }
