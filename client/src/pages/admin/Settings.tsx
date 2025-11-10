@@ -19,11 +19,7 @@ export default function Settings() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { openaiApiKey: string }) => {
-      return await apiRequest({
-        url: "/api/admin/settings",
-        method: "PUT",
-        body: data,
-      });
+      return await apiRequest("PUT", "/api/admin/settings", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
