@@ -507,6 +507,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get default AI prompt template
+  app.get("/api/admin/settings/default-prompt", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { DEFAULT_AI_PROMPT } = await import("./lib/openai");
+      res.json({ defaultPrompt: DEFAULT_AI_PROMPT });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get all settings
   app.get("/api/admin/settings", requireAuth, async (req: Request, res: Response) => {
     try {
