@@ -59,16 +59,16 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
     );
   }
 
-  const getStatusVariant = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return "default";
+        return "bg-green-500/10 text-green-700 dark:bg-green-500/20 dark:text-green-400 border-green-500/20";
       case "processing":
-        return "secondary";
+        return "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-500/20";
       case "failed":
-        return "destructive";
+        return "bg-red-500/10 text-red-700 dark:bg-red-500/20 dark:text-red-400 border-red-500/20";
       default:
-        return "secondary";
+        return "bg-gray-500/10 text-gray-700 dark:bg-gray-500/20 dark:text-gray-400 border-gray-500/20";
     }
   };
 
@@ -123,7 +123,7 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <Badge variant={getStatusVariant(report.status)} data-testid={`badge-status-${report.id}`}>
+                    <Badge className={getStatusBadge(report.status)} data-testid={`badge-status-${report.id}`}>
                       {report.status}
                     </Badge>
                   </td>
@@ -203,7 +203,7 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                     <span className="truncate">{report.client.companyName}</span>
                   </div>
                 </div>
-                <Badge variant={getStatusVariant(report.status)}>
+                <Badge className={getStatusBadge(report.status)}>
                   {report.status}
                 </Badge>
               </div>
