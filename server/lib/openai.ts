@@ -1,34 +1,50 @@
 import OpenAI from "openai";
+import { storage } from "../storage";
 
-// This is using OpenAI's API, which requires your own API key
-// the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-const openai = process.env.OPENAI_API_KEY 
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-  : null;
+// GPT-5 was released August 7, 2025
+const GPT_5_MODEL = "gpt-5-2025-08-07";
+
+async function getOpenAIClient(): Promise<OpenAI | null> {
+  // Try to get API key from database settings first
+  const apiKey = await storage.getSetting('openai_api_key');
+  
+  if (apiKey) {
+    return new OpenAI({ apiKey });
+  }
+  
+  // Fallback to environment variable
+  if (process.env.OPENAI_API_KEY) {
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  
+  return null;
+}
 
 export async function analyzeReport(formData: any, imageBase64Array: string[]) {
+  // Get OpenAI client with API key from database or environment
+  const openai = await getOpenAIClient();
+  
   // If OpenAI API key is not configured, return a mock analysis
   if (!openai) {
-    console.warn("⚠️ OPENAI_API_KEY not configured - using mock AI analysis");
+    console.warn("⚠️ No OpenAI API key configured in settings or environment - using mock AI analysis");
     return generateMockAnalysis(formData, imageBase64Array);
   }
 
   // Try with images first, fallback to text-only if images fail
   try {
-    return await analyzeWithImages(formData, imageBase64Array);
+    return await analyzeWithImages(openai, formData, imageBase64Array);
   } catch (error: any) {
+    console.error("❌ GPT-5 analysis failed:", error);
     // If image parsing fails, retry without images
     if (error?.message?.includes('image') || error?.status === 400) {
       console.warn("⚠️ Image processing failed, retrying without images:", error.message);
-      return await analyzeWithImages(formData, []);
+      return await analyzeWithImages(openai, formData, []);
     }
     throw error;
   }
 }
 
-async function analyzeWithImages(formData: any, imageBase64Array: string[]) {
-  if (!openai) throw new Error("OpenAI not configured");
-  
+async function analyzeWithImages(openai: OpenAI, formData: any, imageBase64Array: string[]) {
   const prompt = `You are a construction site documentation assistant. Using the provided JSON data and site photos, create a professional daily site report in a consistent JSON structure.
 
 **INPUT DATA:**
@@ -124,12 +140,16 @@ Analyze the data and images, then output a structured JSON report following this
     }
   ];
 
+  console.log(`🤖 Analyzing report with GPT-5 (${imageBase64Array.length} images)...`);
+  
   const response = await openai.chat.completions.create({
-    model: "gpt-5",
+    model: GPT_5_MODEL,
     max_completion_tokens: 8192,
     messages,
     response_format: { type: "json_object" }
   });
+
+  console.log(`✅ GPT-5 analysis completed successfully`);
 
   const content = response.choices[0].message.content;
   if (!content) throw new Error("No response from GPT-5");

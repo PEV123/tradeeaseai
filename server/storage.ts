@@ -1,4 +1,4 @@
-import { type Admin, type Client, type Report, type Image, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images } from "@shared/schema";
+import { type Admin, type Client, type Report, type Image, type Settings, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images, settings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -31,6 +31,11 @@ export interface IStorage {
   getImagesByReport(reportId: string): Promise<Image[]>;
   createImage(image: Omit<Image, 'id' | 'uploadedAt'>): Promise<Image>;
   updateImage(id: string, image: Partial<Omit<Image, 'id' | 'reportId' | 'uploadedAt'>>): Promise<Image | undefined>;
+
+  // Settings
+  getSetting(key: string): Promise<string | null>;
+  setSetting(key: string, value: string | null): Promise<void>;
+  getAllSettings(): Promise<Record<string, string | null>>;
 
   // Stats
   getStats(): Promise<{
@@ -274,6 +279,25 @@ export class MemStorage implements IStorage {
     };
     this.images.set(id, updated);
     return updated;
+  }
+
+  // Settings methods (in-memory, not persisted)
+  private settings: Map<string, string | null> = new Map();
+
+  async getSetting(key: string): Promise<string | null> {
+    return this.settings.get(key) ?? null;
+  }
+
+  async setSetting(key: string, value: string | null): Promise<void> {
+    this.settings.set(key, value);
+  }
+
+  async getAllSettings(): Promise<Record<string, string | null>> {
+    const result: Record<string, string | null> = {};
+    for (const [key, value] of this.settings.entries()) {
+      result[key] = value;
+    }
+    return result;
   }
 
   // Stats methods
@@ -532,6 +556,36 @@ export class DbStorage implements IStorage {
       .where(eq(images.id, id))
       .returning();
     return result[0];
+  }
+
+  // Settings methods
+  async getSetting(key: string): Promise<string | null> {
+    const result = await this.db.select().from(settings).where(eq(settings.key, key));
+    return result[0]?.value ?? null;
+  }
+
+  async setSetting(key: string, value: string | null): Promise<void> {
+    const existing = await this.db.select().from(settings).where(eq(settings.key, key));
+    
+    if (existing.length > 0) {
+      await this.db
+        .update(settings)
+        .set({ value, updatedAt: new Date() })
+        .where(eq(settings.key, key));
+    } else {
+      await this.db
+        .insert(settings)
+        .values({ key, value });
+    }
+  }
+
+  async getAllSettings(): Promise<Record<string, string | null>> {
+    const result = await this.db.select().from(settings);
+    const settingsObj: Record<string, string | null> = {};
+    for (const setting of result) {
+      settingsObj[setting.key] = setting.value;
+    }
+    return settingsObj;
   }
 
   // Stats methods

@@ -14,6 +14,7 @@ import EditClient from "@/pages/admin/EditClient";
 import ClientReports from "@/pages/admin/ClientReports";
 import Reports from "@/pages/admin/Reports";
 import ReportDetail from "@/pages/admin/ReportDetail";
+import Settings from "@/pages/admin/Settings";
 import PublicForm from "@/pages/public/PublicForm";
 
 function ProtectedRoute({ component: Component }: { component: any }) {
@@ -78,6 +79,9 @@ function App() {
           </Route>
           <Route path="/admin/reports">
             {() => <ProtectedRoute component={Reports} />}
+          </Route>
+          <Route path="/admin/settings">
+            {() => <ProtectedRoute component={Settings} />}
           </Route>
           <Route path="/admin">
             {() => <ProtectedRoute component={Clients} />}

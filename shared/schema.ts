@@ -47,6 +47,13 @@ export const images = pgTable("images", {
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
 });
 
+export const settings = pgTable("settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key", { length: 255 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 // Admin Schema
 export const adminSchema = z.object({
   id: z.string(),
@@ -155,6 +162,27 @@ export const insertImageSchema = z.object({
 
 export type Image = z.infer<typeof imageSchema>;
 export type InsertImage = z.infer<typeof insertImageSchema>;
+
+// Settings Schema
+export const settingsSchema = z.object({
+  id: z.string(),
+  key: z.string(),
+  value: z.string().nullable(),
+  updatedAt: z.date(),
+});
+
+export const insertSettingsSchema = z.object({
+  key: z.string(),
+  value: z.string().nullable(),
+});
+
+export const updateSettingsSchema = z.object({
+  openaiApiKey: z.string().min(1, "OpenAI API key is required").optional(),
+});
+
+export type Settings = z.infer<typeof settingsSchema>;
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
 
 // API Response Types
 export type AuthResponse = {

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Building2, FileText, Users, LogOut, LayoutDashboard } from "lucide-react";
+import { Building2, FileText, Users, LogOut, LayoutDashboard, Settings } from "lucide-react";
 import logoUrl from "@assets/tradeaseai-logo_1762739159026.png";
 
 interface AdminLayoutProps {
@@ -15,6 +15,7 @@ export default function AdminLayout({ children, onLogout }: AdminLayoutProps) {
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { name: "Clients", href: "/admin/clients", icon: Building2 },
     { name: "All Reports", href: "/admin/reports", icon: FileText },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
   const isActive = (href: string) => {

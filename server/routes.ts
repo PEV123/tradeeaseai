@@ -6,7 +6,7 @@ import { initializeAdmin, hashPassword, verifyPassword, generateToken, verifyTok
 import { analyzeReport } from "./lib/openai";
 import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
-import { loginSchema, insertClientSchema, insertReportSchema } from "@shared/schema";
+import { loginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -410,6 +410,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting report:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get all settings
+  app.get("/api/admin/settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Don't expose raw API keys - only return status
+      const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
+      res.json({ openai_api_key: hasApiKey ? '***configured***' : null });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update settings
+  app.put("/api/admin/settings", requireAuth, async (req: Request, res: Response) => {
+    try {
+      // Validate request body
+      const validated = updateSettingsSchema.parse(req.body);
+      
+      if (validated.openaiApiKey !== undefined) {
+        // Normalize: trim whitespace and convert empty strings to null
+        const normalizedKey = validated.openaiApiKey.trim() || null;
+        
+        // Reject whitespace-only values
+        if (normalizedKey === null || normalizedKey.length === 0) {
+          return res.status(400).json({ error: "OpenAI API key cannot be empty or whitespace-only" });
+        }
+        
+        await storage.setSetting('openai_api_key', normalizedKey);
+      }
+      
+      // Don't expose the raw API key in response - just return status
+      const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
+      res.json({ openai_api_key: hasApiKey ? '***configured***' : null });
+    } catch (error: any) {
+      // Handle Zod validation errors
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid settings data", details: error.errors });
+      }
       res.status(500).json({ error: error.message });
     }
   });
