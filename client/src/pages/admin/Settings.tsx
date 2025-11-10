@@ -19,25 +19,11 @@ export default function Settings() {
     queryKey: ["/api/admin/settings"],
   });
 
-  // Load AI prompt from settings when available, or fetch default
+  // Load AI prompt from settings when available, or use default
   useEffect(() => {
     if (settings) {
-      if (settings.ai_prompt) {
-        setAiPrompt(settings.ai_prompt);
-      } else {
-        // Load default prompt from backend using authenticated request
-        const token = localStorage.getItem('token');
-        if (token) {
-          fetch('/api/admin/settings/default-prompt', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-            .then(res => res.json())
-            .then(data => setAiPrompt(data.defaultPrompt))
-            .catch(err => console.error('Failed to load default prompt:', err));
-        }
-      }
+      // Use custom prompt if set, otherwise use default
+      setAiPrompt(settings.ai_prompt || settings.default_ai_prompt || "");
     }
   }, [settings]);
 

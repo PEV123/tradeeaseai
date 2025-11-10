@@ -507,25 +507,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get default AI prompt template
-  app.get("/api/admin/settings/default-prompt", requireAuth, async (req: Request, res: Response) => {
-    try {
-      const { DEFAULT_AI_PROMPT } = await import("./lib/openai");
-      res.json({ defaultPrompt: DEFAULT_AI_PROMPT });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Get all settings
   app.get("/api/admin/settings", requireAuth, async (req: Request, res: Response) => {
     try {
       // Don't expose raw API keys - only return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
       const aiPrompt = await storage.getSetting('ai_prompt');
+      
+      // Include default prompt so UI can show it
+      const { DEFAULT_AI_PROMPT } = await import("./lib/openai");
+      
       res.json({ 
         openai_api_key: hasApiKey ? '***configured***' : null,
-        ai_prompt: aiPrompt 
+        ai_prompt: aiPrompt,
+        default_ai_prompt: DEFAULT_AI_PROMPT
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
