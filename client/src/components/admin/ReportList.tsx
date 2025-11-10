@@ -30,9 +30,7 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/reports/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/admin/reports/${id}`, undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });

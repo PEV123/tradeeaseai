@@ -28,9 +28,7 @@ export default function ClientList({ clients }: ClientListProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/admin/clients/${id}`, {
-        method: "DELETE",
-      });
+      return apiRequest("DELETE", `/api/admin/clients/${id}`, undefined);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
