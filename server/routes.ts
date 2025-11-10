@@ -262,6 +262,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get reports for a specific client
+  app.get("/api/admin/clients/:id/reports", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reports = await storage.getReportsByClient(req.params.id);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create client
   app.post("/api/admin/clients", requireAuth, upload.single('logo'), async (req: Request, res: Response) => {
     try {

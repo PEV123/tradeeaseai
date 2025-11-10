@@ -11,7 +11,7 @@ export default function ClientReports() {
   const clientId = params?.id;
 
   const { data: reports = [], isLoading } = useQuery<ReportWithClient[]>({
-    queryKey: ["/api/admin/reports", { clientId }],
+    queryKey: [`/api/admin/clients/${clientId}/reports`],
     enabled: !!clientId,
   });
 
