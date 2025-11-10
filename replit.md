@@ -193,10 +193,15 @@ Preferred communication style: Simple, everyday language.
 - **Current State**: PostgreSQL database fully operational (DbStorage class)
 - **Provider**: Neon Database (@neondatabase/serverless)
 - **ORM**: Drizzle ORM with type-safe queries and schema management
-- **Tables**: admins, clients, reports, images (all with proper foreign key relationships)
+- **Tables**: admins, clients, reports, images, workers, settings (all with proper foreign key relationships)
 - **Migration**: Completed migration from MemStorage to DbStorage on November 10, 2025
 - **Configuration**: `DATABASE_URL` environment variable in drizzle.config.ts
 - **Schema Management**: `npm run db:push` for schema synchronization
+- **Environment Setup**: Both development and production environments use the same database (configured November 10, 2025)
+  - This ensures data consistency across environments
+  - No separate dev/production databases - all changes affect production data
+  - Benefits: Simplified data management, no sync issues, real-world testing
+  - Consideration: Exercise caution when testing features that modify data
 
 ### CDN Resources
 - **Google Fonts**: Inter font family loaded via CDN in HTML
