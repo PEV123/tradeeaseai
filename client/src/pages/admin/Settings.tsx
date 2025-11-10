@@ -25,11 +25,18 @@ export default function Settings() {
       if (settings.ai_prompt) {
         setAiPrompt(settings.ai_prompt);
       } else {
-        // Load default prompt from backend
-        fetch('/api/admin/settings/default-prompt')
-          .then(res => res.json())
-          .then(data => setAiPrompt(data.defaultPrompt))
-          .catch(err => console.error('Failed to load default prompt:', err));
+        // Load default prompt from backend using authenticated request
+        const token = localStorage.getItem('token');
+        if (token) {
+          fetch('/api/admin/settings/default-prompt', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          })
+            .then(res => res.json())
+            .then(data => setAiPrompt(data.defaultPrompt))
+            .catch(err => console.error('Failed to load default prompt:', err));
+        }
       }
     }
   }, [settings]);
