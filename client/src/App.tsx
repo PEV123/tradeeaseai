@@ -11,6 +11,7 @@ import Dashboard from "@/pages/admin/Dashboard";
 import Clients from "@/pages/admin/Clients";
 import NewClient from "@/pages/admin/NewClient";
 import EditClient from "@/pages/admin/EditClient";
+import ClientReports from "@/pages/admin/ClientReports";
 import Reports from "@/pages/admin/Reports";
 import ReportDetail from "@/pages/admin/ReportDetail";
 import PublicForm from "@/pages/public/PublicForm";
@@ -62,6 +63,9 @@ function App() {
           </Route>
           <Route path="/admin/clients/new">
             {() => <ProtectedRoute component={NewClient} />}
+          </Route>
+          <Route path="/admin/clients/:id/reports">
+            {() => <ProtectedRoute component={ClientReports} />}
           </Route>
           <Route path="/admin/clients/:id/edit">
             {() => <ProtectedRoute component={EditClient} />}
