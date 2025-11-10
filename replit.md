@@ -35,7 +35,7 @@ Preferred communication style: Simple, everyday language.
 
 **Routing**: Wouter for lightweight client-side routing
 - Public routes: `/form/:slug` for custom-branded report submission forms
-- Admin routes: `/admin/*` with subroutes for dashboard, clients, and reports
+- Admin routes: `/admin/*` with subroutes for dashboard, clients, reports, and settings
 - Not Found fallback for unmatched routes
 
 **Form Handling**: React Hook Form with Zod schema validation
@@ -87,6 +87,7 @@ Preferred communication style: Simple, everyday language.
 - **Client**: Construction company with branding (logo, color), contact info, notification emails, and unique form slug
 - **Report**: Daily site report linked to client, contains form data, AI analysis, and processing status
 - **Image**: Site photos linked to reports with file paths and optional AI-generated captions
+- **Settings**: Key-value storage for application configuration (OpenAI API key, etc.)
 
 **Schema Validation**: Zod schemas in `/shared/schema.ts`
 - Type-safe validation for all data models
@@ -96,10 +97,13 @@ Preferred communication style: Simple, everyday language.
 ### AI Integration Architecture
 
 **OpenAI API Integration** (`server/lib/openai.ts`):
-- Uses GPT-5 model (newest available as of August 7, 2025)
+- Uses GPT-5 model: `gpt-5-2025-08-07` (released August 7, 2025)
+- API key loaded from database settings table (fallback to OPENAI_API_KEY environment variable)
+- Managed through admin Settings page at `/admin/settings`
+- Uses chat.completions API with vision capabilities for image analysis
 - Analyzes form data and site photos to generate structured report analysis
 - Returns JSON with report metadata, site conditions, workforce details, works summary, materials, safety observations, and image analysis
-- Falls back to mock analysis if API key not configured
+- Falls back to mock analysis if no API key configured
 
 **Analysis Output Structure**:
 - Report metadata (project name, date, ID)
