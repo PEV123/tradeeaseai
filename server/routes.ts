@@ -272,6 +272,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete client
+  app.delete("/api/admin/clients/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const success = await storage.deleteClient(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create client
   app.post("/api/admin/clients", requireAuth, upload.single('logo'), async (req: Request, res: Response) => {
     try {
@@ -382,6 +396,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.download(report.pdfPath, `report-${req.params.id}.pdf`);
     } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Delete report
+  app.delete("/api/admin/reports/:id", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const success = await storage.deleteReport(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error deleting report:", error);
       res.status(500).json({ error: error.message });
     }
   });

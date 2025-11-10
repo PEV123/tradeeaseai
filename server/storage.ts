@@ -24,6 +24,7 @@ export interface IStorage {
   getReportsByClient(clientId: string): Promise<ReportWithClient[]>;
   createReport(report: Omit<Report, 'id' | 'submittedAt' | 'processedAt'>): Promise<Report>;
   updateReport(id: string, report: Partial<Omit<Report, 'id' | 'clientId' | 'submittedAt'>>): Promise<Report | undefined>;
+  deleteReport(id: string): Promise<boolean>;
 
   // Images
   getImage(id: string): Promise<Image | undefined>;
@@ -121,6 +122,27 @@ export class MemStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<boolean> {
+    const client = this.clients.get(id);
+    if (!client) return false;
+
+    // Delete all reports for this client (which cascades to images and files)
+    const clientReports = Array.from(this.reports.values()).filter(
+      r => r.clientId === id
+    );
+    for (const report of clientReports) {
+      await this.deleteReport(report.id);
+    }
+
+    // Delete client logo if exists
+    if (client.logoPath) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(client.logoPath);
+      } catch (error) {
+        console.error(`Failed to delete logo file ${client.logoPath}:`, error);
+      }
+    }
+
     return this.clients.delete(id);
   }
 
@@ -186,6 +208,38 @@ export class MemStorage implements IStorage {
     };
     this.reports.set(id, updated);
     return updated;
+  }
+
+  async deleteReport(id: string): Promise<boolean> {
+    const report = this.reports.get(id);
+    if (!report) return false;
+
+    // Delete associated images
+    const imagesToDelete = Array.from(this.images.values()).filter(
+      img => img.reportId === id
+    );
+    for (const img of imagesToDelete) {
+      this.images.delete(img.id);
+      // Delete image file if exists
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(img.filePath);
+      } catch (error) {
+        console.error(`Failed to delete image file ${img.filePath}:`, error);
+      }
+    }
+
+    // Delete PDF file if exists
+    if (report.pdfPath) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(report.pdfPath);
+      } catch (error) {
+        console.error(`Failed to delete PDF file ${report.pdfPath}:`, error);
+      }
+    }
+
+    return this.reports.delete(id);
   }
 
   // Image methods
@@ -323,8 +377,34 @@ export class DbStorage implements IStorage {
   }
 
   async deleteClient(id: string): Promise<boolean> {
-    const result = await this.db.delete(clients).where(eq(clients.id, id)).returning();
-    return result.length > 0;
+    const client = await this.db.select().from(clients).where(eq(clients.id, id));
+    if (!client[0]) return false;
+
+    const clientData = client[0] as Client;
+
+    // Delete all reports for this client (cascades to images and files)
+    const clientReports = await this.db
+      .select()
+      .from(reports)
+      .where(eq(reports.clientId, id));
+    
+    for (const report of clientReports) {
+      await this.deleteReport((report as Report).id);
+    }
+
+    // Delete client logo if exists
+    if (clientData.logoPath) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(clientData.logoPath);
+      } catch (error) {
+        console.error(`Failed to delete logo file ${clientData.logoPath}:`, error);
+      }
+    }
+
+    // Delete client from database
+    const deleteResult = await this.db.delete(clients).where(eq(clients.id, id)).returning();
+    return deleteResult.length > 0;
   }
 
   // Report methods
@@ -387,6 +467,39 @@ export class DbStorage implements IStorage {
       .where(eq(reports.id, id))
       .returning();
     return result[0] as Report | undefined;
+  }
+
+  async deleteReport(id: string): Promise<boolean> {
+    const report = await this.db.select().from(reports).where(eq(reports.id, id));
+    if (!report[0]) return false;
+
+    const reportData = report[0] as Report;
+
+    // Delete associated images from database and filesystem
+    const imageList = await this.db.select().from(images).where(eq(images.reportId, id));
+    for (const img of imageList) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(img.filePath);
+      } catch (error) {
+        console.error(`Failed to delete image file ${img.filePath}:`, error);
+      }
+    }
+    await this.db.delete(images).where(eq(images.reportId, id));
+
+    // Delete PDF file if exists
+    if (reportData.pdfPath) {
+      try {
+        const fs = await import('fs/promises');
+        await fs.unlink(reportData.pdfPath);
+      } catch (error) {
+        console.error(`Failed to delete PDF file ${reportData.pdfPath}:`, error);
+      }
+    }
+
+    // Delete report from database
+    const deleteResult = await this.db.delete(reports).where(eq(reports.id, id)).returning();
+    return deleteResult.length > 0;
   }
 
   // Image methods

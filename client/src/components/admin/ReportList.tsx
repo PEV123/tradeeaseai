@@ -3,8 +3,22 @@ import { type ReportWithClient } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { FileText, Download, Eye, Calendar, Building2 } from "lucide-react";
+import { FileText, Download, Eye, Calendar, Building2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReportListProps {
   reports: ReportWithClient[];
@@ -12,6 +26,31 @@ interface ReportListProps {
 }
 
 export default function ReportList({ reports, onDownloadPdf }: ReportListProps) {
+  const { toast } = useToast();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/admin/reports/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      toast({
+        title: "Report deleted",
+        description: "The report and all associated files have been permanently deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message || "Failed to delete report",
+      });
+    },
+  });
+
   if (reports.length === 0) {
     return (
       <div className="text-center py-16">
@@ -109,6 +148,37 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                           PDF
                         </Button>
                       )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            data-testid={`button-delete-${report.id}`}
+                            disabled={deleteMutation.isPending}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Report?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete the report for "{report.projectName}" and all associated files (images, PDF). This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel data-testid={`button-cancel-delete-${report.id}`}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteMutation.mutate(report.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                              data-testid={`button-confirm-delete-${report.id}`}
+                            >
+                              Delete Permanently
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </td>
                 </tr>
@@ -158,6 +228,35 @@ export default function ReportList({ reports, onDownloadPdf }: ReportListProps) 
                     PDF
                   </Button>
                 )}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Report?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the report for "{report.projectName}" and all associated files (images, PDF). This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate(report.id)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Delete Permanently
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           </Card>

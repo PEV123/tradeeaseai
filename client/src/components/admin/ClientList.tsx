@@ -3,13 +3,52 @@ import { type ClientWithReportCount } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Edit, FileText, Link as LinkIcon } from "lucide-react";
+import { Building2, Edit, FileText, Link as LinkIcon, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ClientListProps {
   clients: ClientWithReportCount[];
 }
 
 export default function ClientList({ clients }: ClientListProps) {
+  const { toast } = useToast();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest(`/api/admin/clients/${id}`, {
+        method: "DELETE",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+      toast({
+        title: "Client deleted",
+        description: "The client and all associated reports have been permanently deleted.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete failed",
+        description: error.message || "Failed to delete client",
+      });
+    },
+  });
+
   if (clients.length === 0) {
     return (
       <div className="text-center py-16">
@@ -82,6 +121,39 @@ export default function ClientList({ clients }: ClientListProps) {
                 </Button>
               </Link>
             </div>
+            
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  data-testid={`button-delete-${client.id}`}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Client
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {client.companyName}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this client, all {client.reportCount} associated reports, and all related files (images, PDFs). This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid={`button-cancel-delete-${client.id}`}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteMutation.mutate(client.id)}
+                    className="bg-destructive hover:bg-destructive/90"
+                    data-testid={`button-confirm-delete-${client.id}`}
+                  >
+                    Delete Permanently
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardContent>
         </Card>
       ))}
