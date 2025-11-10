@@ -1,0 +1,152 @@
+2025-11-10 17:19:46.26
+0592bb58
+User
+at async file:///home/runner/workspace/dist/index.js:1551:23 {
+2025-11-10 17:19:46.26
+0592bb58
+User
+errno: -2,
+2025-11-10 17:19:46.26
+0592bb58
+User
+code: 'ENOENT',
+2025-11-10 17:19:46.26
+0592bb58
+User
+syscall: 'unlink',
+2025-11-10 17:19:46.26
+0592bb58
+User
+path: 'storage/images/108ac25e-a061-405f-9ab6-5a91fa9829f8_1_1762753665068.jpg'
+2025-11-10 17:19:46.26
+0592bb58
+User
+}
+2025-11-10 17:19:46.26
+0592bb58
+User
+Failed to delete image file storage/images/108ac25e-a061-405f-9ab6-5a91fa9829f8_0_1762753664532.jpg: Error: ENOENT: no such file or directory, unlink 'storage/images/108ac25e-a061-405f-9ab6-5a91fa9829f8_0_1762753664532.jpg'
+2025-11-10 17:19:46.26
+0592bb58
+User
+at async Module.unlink (node:internal/fs/promises:1070:10)
+2025-11-10 17:19:46.26
+0592bb58
+User
+at async DbStorage.deleteReport (file:///home/runner/workspace/dist/index.js:314:13)
+2025-11-10 17:19:46.26
+0592bb58
+User
+at async file:///home/runner/workspace/dist/index.js:1551:23 {
+2025-11-10 17:19:46.26
+0592bb58
+User
+errno: -2,
+2025-11-10 17:19:46.26
+0592bb58
+User
+code: 'ENOENT',
+2025-11-10 17:19:46.26
+0592bb58
+User
+syscall: 'unlink',
+2025-11-10 17:19:46.26
+0592bb58
+User
+path: 'storage/images/108ac25e-a061-405f-9ab6-5a91fa9829f8_0_1762753664532.jpg'
+2025-11-10 17:19:46.26
+0592bb58
+User
+}
+2025-11-10 17:19:46.28
+0592bb58
+User
+Failed to delete PDF file /home/runner/workspace/storage/pdfs/108ac25e-a061-405f-9ab6-5a91fa9829f8.pdf: Error: ENOENT: no such file or directory, unlink '/home/runner/workspace/storage/pdfs/108ac25e-a061-405f-9ab6-5a91fa9829f8.pdf'
+2025-11-10 17:19:46.28
+0592bb58
+User
+at async Module.unlink (node:internal/fs/promises:1070:10)
+2025-11-10 17:19:46.28
+0592bb58
+User
+at async DbStorage.deleteReport (file:///home/runner/workspace/dist/index.js:323:13)
+2025-11-10 17:19:46.28
+0592bb58
+User
+at async file:///home/runner/workspace/dist/index.js:1551:23 {
+2025-11-10 17:19:46.28
+0592bb58
+User
+errno: -2,
+2025-11-10 17:19:46.28
+0592bb58
+User
+code: 'ENOENT',
+2025-11-10 17:19:46.28
+0592bb58
+User
+syscall: 'unlink',
+2025-11-10 17:19:46.28
+0592bb58
+User
+path: '/home/runner/workspace/storage/pdfs/108ac25e-a061-405f-9ab6-5a91fa9829f8.pdf'
+2025-11-10 17:19:46.28
+0592bb58
+User
+}
+2025-11-10 17:19:46.30
+0592bb58
+User
+6:19:46 AM [express] DELETE /api/admin/reports/108ac25e-a061-405f-9ab6-5a91fa9829f8 200 in 133ms :: …
+2025-11-10 17:19:46.66
+0592bb58
+User
+6:19:46 AM [express] GET /api/admin/reports 200 in 81ms :: [{"id":"7266ce28-f0e5-4594-8281-05afab039…
+2025-11-10 17:19:48.72
+0592bb58
+User
+6:19:48 AM [express] GET /api/reports/2ec308ae-c34c-4cef-b651-05389ddca9c8/workers 200 in 18ms :: []
+2025-11-10 17:19:48.75
+0592bb58
+User
+6:19:48 AM [express] GET /api/reports/2ec308ae-c34c-4cef-b651-05389ddca9c8 200 in 51ms :: {"id":"2ec…
+2025-11-10 17:19:52.64
+0592bb58
+User
+6:19:52 AM [express] GET /api/admin/stats 200 in 70ms :: {"totalClients":1,"totalReports":2,"process…
+2025-11-10 17:21:14.54
+0592bb58
+User
+6:21:14 AM [express] GET /api/admin/clients 304 in 2496ms :: [{"id":"9e9417a5-844a-4da8-b8b2-ff101eb…
+2025-11-10 17:21:59.79
+0592bb58
+User
+✅ GPT-5 analysis completed successfully
+2025-11-10 17:22:28.60
+0592bb58
+User
+6:22:28 AM [express] GET /api/public/client/footscray 304 in 54ms :: {"id":"9e9417a5-844a-4da8-b8b2-…
+2025-11-10 17:22:58.19
+0592bb58
+User
+Error processing report: TimeoutError: Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout!
+2025-11-10 17:22:58.19
+0592bb58
+User
+at ChromeLauncher.launch (file:///home/runner/workspace/node_modules/puppeteer-core/lib/esm/puppeteer/node/BrowserLauncher.js:144:23)
+2025-11-10 17:22:58.19
+0592bb58
+User
+at async generatePDF (file:///home/runner/workspace/dist/index.js:720:19)
+2025-11-10 17:22:58.19
+0592bb58
+User
+at async file:///home/runner/workspace/dist/index.js:1281:29
+2025-11-10 17:23:47.54
+0592bb58
+User
+6:23:47 AM [express] GET /api/admin/clients/9e9417a5-844a-4da8-b8b2-ff101eb71846 304 in 51ms :: {"id…
+2025-11-10 17:23:47.60
+0592bb58
+User
+6:23:47 AM [express] GET /api/admin/clients/9e9417a5-844a-4da8-b8b2-ff101eb71846/reports 200 in 151m…

@@ -304,7 +304,7 @@ export class MemStorage implements IStorage {
 
   async getAllSettings(): Promise<Record<string, string | null>> {
     const result: Record<string, string | null> = {};
-    for (const [key, value] of this.settings.entries()) {
+    for (const [key, value] of Array.from(this.settings.entries())) {
       result[key] = value;
     }
     return result;
@@ -327,7 +327,7 @@ export class MemStorage implements IStorage {
   }
 
   async deleteWorkersByReport(reportId: string): Promise<void> {
-    for (const [id, worker] of this.workers.entries()) {
+    for (const [id, worker] of Array.from(this.workers.entries())) {
       if (worker.reportId === reportId) {
         this.workers.delete(id);
       }
@@ -454,9 +454,12 @@ export class DbStorage implements IStorage {
     if (clientData.logoPath) {
       try {
         const fs = await import('fs/promises');
+        await fs.access(clientData.logoPath);
         await fs.unlink(clientData.logoPath);
-      } catch (error) {
-        console.error(`Failed to delete logo file ${clientData.logoPath}:`, error);
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') {
+          console.error(`Failed to delete logo file ${clientData.logoPath}:`, error);
+        }
       }
     }
 
@@ -538,9 +541,12 @@ export class DbStorage implements IStorage {
     for (const img of imageList) {
       try {
         const fs = await import('fs/promises');
+        await fs.access(img.filePath);
         await fs.unlink(img.filePath);
-      } catch (error) {
-        console.error(`Failed to delete image file ${img.filePath}:`, error);
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') {
+          console.error(`Failed to delete image file ${img.filePath}:`, error);
+        }
       }
     }
     await this.db.delete(images).where(eq(images.reportId, id));
@@ -549,9 +555,12 @@ export class DbStorage implements IStorage {
     if (reportData.pdfPath) {
       try {
         const fs = await import('fs/promises');
+        await fs.access(reportData.pdfPath);
         await fs.unlink(reportData.pdfPath);
-      } catch (error) {
-        console.error(`Failed to delete PDF file ${reportData.pdfPath}:`, error);
+      } catch (error: any) {
+        if (error?.code !== 'ENOENT') {
+          console.error(`Failed to delete PDF file ${reportData.pdfPath}:`, error);
+        }
       }
     }
 

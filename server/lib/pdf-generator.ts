@@ -43,16 +43,50 @@ export async function generatePDF(
 
   const html = generateReportHTML(report, client, imagesWithBase64, logoBase64);
 
-  // Find Chromium executable path
+  // Find Chromium executable path with extensive logging
   let chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  
   if (!chromiumPath) {
     try {
       const { execSync } = await import('child_process');
-      chromiumPath = execSync('which chromium || which chromium-browser', { encoding: 'utf-8' }).trim();
-    } catch {
-      // Fallback to known Nix store path
-      chromiumPath = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
+      
+      // Try multiple methods to find Chromium
+      const possibleCommands = [
+        'which chromium',
+        'which chromium-browser',
+        'which google-chrome',
+        'which google-chrome-stable',
+        'find /nix/store -name chromium -type f 2>/dev/null | grep bin/chromium | head -1'
+      ];
+      
+      for (const cmd of possibleCommands) {
+        try {
+          const result = execSync(cmd, { encoding: 'utf-8', timeout: 5000 }).trim();
+          if (result) {
+            chromiumPath = result;
+            console.log(`Found Chromium using "${cmd}": ${chromiumPath}`);
+            break;
+          }
+        } catch (e) {
+          // Try next command
+        }
+      }
+    } catch (error) {
+      console.error('Failed to find Chromium path:', error);
     }
+  }
+  
+  if (!chromiumPath) {
+    throw new Error('Chromium not found. Please ensure chromium is installed as a system dependency.');
+  }
+  
+  console.log(`Launching Chromium from: ${chromiumPath}`);
+  
+  // Verify the executable exists and is accessible
+  try {
+    await fs.access(chromiumPath, (await import('fs')).constants.X_OK);
+  } catch (error) {
+    throw new Error(`Chromium executable not accessible at ${chromiumPath}: ${error}`);
   }
 
   const browser = await puppeteer.launch({
@@ -63,8 +97,11 @@ export async function generatePDF(
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-software-rasterizer'
+      '--disable-software-rasterizer',
+      '--single-process',
+      '--no-zygote'
     ],
+    timeout: 60000
   });
 
   const page = await browser.newPage();
