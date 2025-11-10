@@ -109,7 +109,7 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
         <div className="text-center mb-12">
           {client.logoPath ? (
             <img
-              src={client.logoPath}
+              src={`/${client.logoPath}`}
               alt={client.companyName}
               className="h-16 mx-auto mb-4"
             />

@@ -73,7 +73,7 @@ export default function ClientList({ clients }: ClientListProps) {
               <div className="flex-1 min-w-0">
                 {client.logoPath ? (
                   <img 
-                    src={client.logoPath} 
+                    src={`/${client.logoPath}`} 
                     alt={`${client.companyName} logo`}
                     className="h-12 object-contain mb-3"
                   />

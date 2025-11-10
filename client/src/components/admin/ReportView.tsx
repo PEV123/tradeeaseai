@@ -25,7 +25,7 @@ export default function ReportView({ report, onDownloadPdf, onRegenerate, isRege
         <div className="space-y-1 flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             {client.logoPath ? (
-              <img src={client.logoPath} alt={client.companyName} className="h-12 object-contain" />
+              <img src={`/${client.logoPath}`} alt={client.companyName} className="h-12 object-contain" />
             ) : (
               <div
                 className="h-12 w-12 rounded-md flex items-center justify-center"
