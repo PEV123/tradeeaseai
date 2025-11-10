@@ -512,7 +512,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Don't expose raw API keys - only return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
-      res.json({ openai_api_key: hasApiKey ? '***configured***' : null });
+      const aiPrompt = await storage.getSetting('ai_prompt');
+      res.json({ 
+        openai_api_key: hasApiKey ? '***configured***' : null,
+        ai_prompt: aiPrompt 
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -535,10 +539,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await storage.setSetting('openai_api_key', normalizedKey);
       }
+
+      if (validated.aiPrompt !== undefined) {
+        // Save the AI prompt (allow empty to reset to default)
+        await storage.setSetting('ai_prompt', validated.aiPrompt || null);
+      }
       
       // Don't expose the raw API key in response - just return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
-      res.json({ openai_api_key: hasApiKey ? '***configured***' : null });
+      const aiPrompt = await storage.getSetting('ai_prompt');
+      res.json({ 
+        openai_api_key: hasApiKey ? '***configured***' : null,
+        ai_prompt: aiPrompt 
+      });
     } catch (error: any) {
       // Handle Zod validation errors
       if (error.name === 'ZodError') {

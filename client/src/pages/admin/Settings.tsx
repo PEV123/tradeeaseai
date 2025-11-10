@@ -1,31 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Key } from "lucide-react";
+import { Loader2, Save, Key, FileText } from "lucide-react";
 
 export default function Settings() {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const { data: settings, isLoading } = useQuery<Record<string, string | null>>({
     queryKey: ["/api/admin/settings"],
   });
 
+  // Load AI prompt from settings when available
+  useEffect(() => {
+    if (settings?.ai_prompt) {
+      setAiPrompt(settings.ai_prompt);
+    }
+  }, [settings]);
+
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { openaiApiKey: string }) => {
+    mutationFn: async (data: { openaiApiKey?: string; aiPrompt?: string }) => {
       return await apiRequest("PUT", "/api/admin/settings", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
       toast({
         title: "Settings saved",
-        description: "Your OpenAI API key has been updated successfully",
+        description: "Your settings have been updated successfully",
       });
       setApiKey("");
       setShowApiKey(false);
@@ -50,6 +59,11 @@ export default function Settings() {
       return;
     }
     updateSettingsMutation.mutate({ openaiApiKey: apiKey });
+  };
+
+  const handlePromptSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate({ aiPrompt });
   };
 
   const hasApiKey = settings?.openai_api_key === '***configured***';
@@ -164,6 +178,92 @@ export default function Settings() {
                 </>
               )}
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>AI Analysis Prompt</CardTitle>
+              <CardDescription>
+                Customize the GPT-5 prompt template used for analyzing site reports and images
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handlePromptSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="aiPrompt">AI Prompt Template</Label>
+              <Textarea
+                id="aiPrompt"
+                data-testid="input-ai-prompt"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Leave empty to use the default prompt..."
+                rows={20}
+                className="font-mono text-sm"
+                disabled={updateSettingsMutation.isPending}
+              />
+              <p className="text-sm text-muted-foreground">
+                Use template variables: <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;reportDate&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;projectName&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;worksPerformed&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;labourOnSite&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;plantMachinery&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;hoursWorked&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;materialsUsed&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;delaysWeather&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;safetyIncidents&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;imageCount&#125;&#125;</code>
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <p className="text-sm font-medium">Prompt Tips</p>
+              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                <li>Template variables will be replaced with actual values from the report form</li>
+                <li>Ensure the prompt requests JSON output for proper parsing</li>
+                <li>Leave blank to use the default construction industry prompt</li>
+                <li>Changes apply to all new reports and regenerated reports</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={updateSettingsMutation.isPending}
+                data-testid="button-save-prompt"
+              >
+                {updateSettingsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
+              </Button>
+              {aiPrompt && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAiPrompt("")}
+                  disabled={updateSettingsMutation.isPending}
+                  data-testid="button-reset-prompt"
+                >
+                  Reset to Default
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>

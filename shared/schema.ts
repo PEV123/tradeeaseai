@@ -178,6 +178,7 @@ export const insertSettingsSchema = z.object({
 
 export const updateSettingsSchema = z.object({
   openaiApiKey: z.string().min(1, "OpenAI API key is required").optional(),
+  aiPrompt: z.string().optional(),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

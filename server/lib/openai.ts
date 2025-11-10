@@ -4,62 +4,22 @@ import { storage } from "../storage";
 // GPT-5 was released August 7, 2025
 const GPT_5_MODEL = "gpt-5-2025-08-07";
 
-async function getOpenAIClient(): Promise<OpenAI | null> {
-  // Try to get API key from database settings first
-  const apiKey = await storage.getSetting('openai_api_key');
-  
-  if (apiKey) {
-    return new OpenAI({ apiKey });
-  }
-  
-  // Fallback to environment variable
-  if (process.env.OPENAI_API_KEY) {
-    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  
-  return null;
-}
-
-export async function analyzeReport(formData: any, imageBase64Array: string[]) {
-  // Get OpenAI client with API key from database or environment
-  const openai = await getOpenAIClient();
-  
-  // If OpenAI API key is not configured, return a mock analysis
-  if (!openai) {
-    console.warn("⚠️ No OpenAI API key configured in settings or environment - using mock AI analysis");
-    return generateMockAnalysis(formData, imageBase64Array);
-  }
-
-  // Try with images first, fallback to text-only if images fail
-  try {
-    return await analyzeWithImages(openai, formData, imageBase64Array);
-  } catch (error: any) {
-    console.error("❌ GPT-5 analysis failed:", error);
-    // If image parsing fails, retry without images
-    if (error?.message?.includes('image') || error?.status === 400) {
-      console.warn("⚠️ Image processing failed, retrying without images:", error.message);
-      return await analyzeWithImages(openai, formData, []);
-    }
-    throw error;
-  }
-}
-
-async function analyzeWithImages(openai: OpenAI, formData: any, imageBase64Array: string[]) {
-  const prompt = `You are a construction site documentation assistant. Using the provided JSON data and site photos, create a professional daily site report in a consistent JSON structure.
+// Default AI prompt template
+export const DEFAULT_AI_PROMPT = `You are a construction site documentation assistant. Using the provided JSON data and site photos, create a professional daily site report in a consistent JSON structure.
 
 **INPUT DATA:**
-Date: ${formData.reportDate}
-Project: ${formData.projectName}
-Works Performed: ${formData.worksPerformed}
-Labour on Site: ${formData.labourOnSite}
-Plant & Machinery: ${formData.plantMachinery || "None specified"}
-Hours Worked: ${formData.hoursWorked}
-Materials Used: ${formData.materialsUsed || "Not specified"}
-Delays/Weather: ${formData.delaysWeather || "No delays reported"}
-Safety Incidents: ${formData.safetyIncidents || "None reported"}
+Date: {{reportDate}}
+Project: {{projectName}}
+Works Performed: {{worksPerformed}}
+Labour on Site: {{labourOnSite}}
+Plant & Machinery: {{plantMachinery}}
+Hours Worked: {{hoursWorked}}
+Materials Used: {{materialsUsed}}
+Delays/Weather: {{delaysWeather}}
+Safety Incidents: {{safetyIncidents}}
 
 **IMAGES:**
-${imageBase64Array.length} site photos are attached showing today's works.
+{{imageCount}} site photos are attached showing today's works.
 
 **TASK:**
 Analyze the data and images, then output a structured JSON report following this exact schema:
@@ -126,6 +86,64 @@ Analyze the data and images, then output a structured JSON report following this
 6. Calculate man_hours (total_workers × total_hours)
 7. For report_id, use format: {PROJECT}_{DATE}_DR
 8. Return ONLY valid JSON, no additional text or explanation`;
+
+async function getOpenAIClient(): Promise<OpenAI | null> {
+  // Try to get API key from database settings first
+  const apiKey = await storage.getSetting('openai_api_key');
+  
+  if (apiKey) {
+    return new OpenAI({ apiKey });
+  }
+  
+  // Fallback to environment variable
+  if (process.env.OPENAI_API_KEY) {
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  
+  return null;
+}
+
+export async function analyzeReport(formData: any, imageBase64Array: string[]) {
+  // Get OpenAI client with API key from database or environment
+  const openai = await getOpenAIClient();
+  
+  // If OpenAI API key is not configured, return a mock analysis
+  if (!openai) {
+    console.warn("⚠️ No OpenAI API key configured in settings or environment - using mock AI analysis");
+    return generateMockAnalysis(formData, imageBase64Array);
+  }
+
+  // Try with images first, fallback to text-only if images fail
+  try {
+    return await analyzeWithImages(openai, formData, imageBase64Array);
+  } catch (error: any) {
+    console.error("❌ GPT-5 analysis failed:", error);
+    // If image parsing fails, retry without images
+    if (error?.message?.includes('image') || error?.status === 400) {
+      console.warn("⚠️ Image processing failed, retrying without images:", error.message);
+      return await analyzeWithImages(openai, formData, []);
+    }
+    throw error;
+  }
+}
+
+async function analyzeWithImages(openai: OpenAI, formData: any, imageBase64Array: string[]) {
+  // Get custom AI prompt from settings, fallback to default
+  const customPrompt = await storage.getSetting('ai_prompt');
+  const promptTemplate = customPrompt || DEFAULT_AI_PROMPT;
+  
+  // Replace template variables with actual values
+  const prompt = promptTemplate
+    .replace('{{reportDate}}', formData.reportDate)
+    .replace('{{projectName}}', formData.projectName)
+    .replace('{{worksPerformed}}', formData.worksPerformed)
+    .replace('{{labourOnSite}}', formData.labourOnSite)
+    .replace('{{plantMachinery}}', formData.plantMachinery || "None specified")
+    .replace('{{hoursWorked}}', formData.hoursWorked)
+    .replace('{{materialsUsed}}', formData.materialsUsed || "Not specified")
+    .replace('{{delaysWeather}}', formData.delaysWeather || "No delays reported")
+    .replace('{{safetyIncidents}}', formData.safetyIncidents || "None reported")
+    .replace('{{imageCount}}', imageBase64Array.length.toString());
 
   const messages: any[] = [
     {
