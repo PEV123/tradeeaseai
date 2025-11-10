@@ -235,10 +235,16 @@ function generateReportHTML(
       border: 1px solid #e0e0e0;
     }
     .image-caption {
-      font-size: 8pt;
-      color: #666;
-      margin-top: 5px;
+      font-size: 9pt;
+      color: #555;
+      margin-top: 8px;
+      padding: 8px 10px;
       font-style: italic;
+      text-align: left;
+      line-height: 1.4;
+      background: #f9f9f9;
+      border-left: 3px solid ${client.brandColor};
+      border-radius: 4px;
     }
     .footer {
       margin-top: 40px;
