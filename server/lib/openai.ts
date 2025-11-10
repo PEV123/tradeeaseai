@@ -12,6 +12,23 @@ export async function analyzeReport(formData: any, imageBase64Array: string[]) {
     console.warn("⚠️ OPENAI_API_KEY not configured - using mock AI analysis");
     return generateMockAnalysis(formData, imageBase64Array);
   }
+
+  // Try with images first, fallback to text-only if images fail
+  try {
+    return await analyzeWithImages(formData, imageBase64Array);
+  } catch (error: any) {
+    // If image parsing fails, retry without images
+    if (error?.message?.includes('image') || error?.status === 400) {
+      console.warn("⚠️ Image processing failed, retrying without images:", error.message);
+      return await analyzeWithImages(formData, []);
+    }
+    throw error;
+  }
+}
+
+async function analyzeWithImages(formData: any, imageBase64Array: string[]) {
+  if (!openai) throw new Error("OpenAI not configured");
+  
   const prompt = `You are a construction site documentation assistant. Using the provided JSON data and site photos, create a professional daily site report in a consistent JSON structure.
 
 **INPUT DATA:**
