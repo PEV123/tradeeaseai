@@ -42,14 +42,14 @@ function AdminRouter() {
 
   return (
     <AdminLayout onLogout={handleLogout}>
-      <Switch base="/admin">
-        <Route path="dashboard" component={Dashboard} />
-        <Route path="clients" component={Clients} />
-        <Route path="clients/new" component={NewClient} />
-        <Route path="clients/:id/edit" component={EditClient} />
-        <Route path="reports" component={Reports} />
-        <Route path="reports/:id" component={ReportDetail} />
-        <Route path=":rest*">
+      <Switch>
+        <Route path="/admin/dashboard" component={Dashboard} />
+        <Route path="/admin/clients" component={Clients} />
+        <Route path="/admin/clients/new" component={NewClient} />
+        <Route path="/admin/clients/:id/edit" component={EditClient} />
+        <Route path="/admin/reports" component={Reports} />
+        <Route path="/admin/reports/:id" component={ReportDetail} />
+        <Route path="/admin*">
           <Redirect to="/admin/clients" />
         </Route>
       </Switch>
@@ -61,6 +61,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/form/:slug" component={PublicForm} />
+      <Route path="/admin" component={AdminRouter} />
       <Route path="/admin/:rest*" component={AdminRouter} />
       <Route path="/">
         <Redirect to="/admin" />
