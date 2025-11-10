@@ -224,7 +224,7 @@ export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
               {report.images.map((image) => (
                 <div key={image.id} className="group relative aspect-square rounded-lg overflow-hidden bg-muted">
                   <img
-                    src={image.filePath}
+                    src={`/${image.filePath}`}
                     alt={image.aiDescription || image.fileName}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     data-testid={`img-site-photo-${image.id}`}
