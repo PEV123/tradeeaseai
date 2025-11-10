@@ -181,9 +181,28 @@ function generateMockAnalysis(formData: any, imageBase64Array: string[]): any {
   const projectSlug = formData.projectName.replace(/\s+/g, '_').toUpperCase();
   const dateString = date.toISOString().split('T')[0].replace(/-/g, '');
   
-  // Parse labour count from the input
-  const labourParts = formData.labourOnSite.split(',').map((s: string) => s.trim());
-  const totalWorkers = labourParts.length;
+  // Parse labour count and worker names from the input
+  // Handle formats like "4 × Labourers – Jack, Josh, Daniel & Simon" or "3 workers: John, Jane, Joe"
+  let workerNames: string[] = [];
+  let totalWorkers = 1;
+  
+  const labourText = formData.labourOnSite;
+  const nameMatch = labourText.match(/[–:-]\s*(.+)$/);
+  
+  if (nameMatch) {
+    // Extract names after the dash/colon
+    const namesText = nameMatch[1];
+    workerNames = namesText
+      .split(/[,&]/)
+      .map((name: string) => name.trim())
+      .filter((name: string) => name.length > 0 && !/^\d/.test(name));
+    totalWorkers = workerNames.length || 1;
+  } else {
+    // Try to extract number from format like "4 workers" or "4 × Labourers"
+    const countMatch = labourText.match(/(\d+)/);
+    totalWorkers = countMatch ? parseInt(countMatch[1]) : 1;
+  }
+  
   const totalHours = parseFloat(formData.hoursWorked) || 8;
   
   return {
@@ -199,7 +218,7 @@ function generateMockAnalysis(formData: any, imageBase64Array: string[]): any {
     },
     workforce: {
       total_workers: totalWorkers,
-      worker_names: labourParts,
+      worker_names: workerNames,
       total_hours: totalHours,
       man_hours: totalWorkers * totalHours
     },

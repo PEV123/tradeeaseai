@@ -87,6 +87,7 @@ Preferred communication style: Simple, everyday language.
 - **Client**: Construction company with branding (logo, color), contact info, notification emails, and unique form slug
 - **Report**: Daily site report linked to client, contains form data, AI analysis, and processing status
 - **Image**: Site photos linked to reports with file paths and optional AI-generated captions
+- **Worker**: Individual worker names extracted from AI analysis, linked to reports with ON DELETE CASCADE
 - **Settings**: Key-value storage for application configuration (OpenAI API key, etc.)
 
 **Schema Validation**: Zod schemas in `/shared/schema.ts`
@@ -109,6 +110,10 @@ Preferred communication style: Simple, everyday language.
 - Report metadata (project name, date, ID)
 - Site conditions (weather, temperature)
 - Workforce information (total workers, names, hours, man-hours)
+  - Individual worker names are extracted from the `workforce.worker_names` array and saved to the `workers` table
+  - Each worker name is stored separately for detailed tracking and display
+  - Worker names are displayed as badges in the report detail view
+  - Note: Existing reports created before worker tracking was implemented need to be regenerated to populate worker data
 - Works summary (detailed description)
 - Materials tracking
 - Safety observations

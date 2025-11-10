@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { type ReportWithClient } from "@shared/schema";
+import { type ReportWithClient, type Worker } from "@shared/schema";
 import ReportView from "@/components/admin/ReportView";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,11 @@ export default function ReportDetail() {
     enabled: !!params?.id,
   });
 
+  const { data: workers } = useQuery<Worker[]>({
+    queryKey: [`/api/reports/${params?.id}/workers`],
+    enabled: !!params?.id,
+  });
+
   const regenerateMutation = useMutation({
     mutationFn: async () => {
       if (!params?.id) throw new Error("No report ID");
@@ -23,6 +28,7 @@ export default function ReportDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/reports/${params?.id}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/reports/${params?.id}/workers`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
       toast({
         title: "Regeneration started",
@@ -106,7 +112,8 @@ export default function ReportDetail() {
       </div>
 
       <ReportView 
-        report={report} 
+        report={report}
+        workers={workers || []}
         onDownloadPdf={handleDownloadPdf}
         onRegenerate={() => regenerateMutation.mutate()}
         isRegenerating={regenerateMutation.isPending}

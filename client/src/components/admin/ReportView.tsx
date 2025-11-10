@@ -1,20 +1,21 @@
 import { useState } from "react";
-import { type ReportWithClient } from "@shared/schema";
+import { type ReportWithClient, type Worker } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
+import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2, Users } from "lucide-react";
 import { format } from "date-fns";
 
 interface ReportViewProps {
   report: ReportWithClient;
+  workers?: Worker[];
   onDownloadPdf?: () => void;
   onRegenerate?: () => void;
   isRegenerating?: boolean;
 }
 
-export default function ReportView({ report, onDownloadPdf, onRegenerate, isRegenerating }: ReportViewProps) {
+export default function ReportView({ report, workers = [], onDownloadPdf, onRegenerate, isRegenerating }: ReportViewProps) {
   const { client, formData, aiAnalysis } = report;
   const [selectedImage, setSelectedImage] = useState<{ src: string; description: string } | null>(null);
 
@@ -190,20 +191,37 @@ export default function ReportView({ report, onDownloadPdf, onRegenerate, isRege
             )}
 
             {aiAnalysis.workforce && (
-              <div className="grid md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Workers</p>
-                  <p className="text-2xl font-semibold">{aiAnalysis.workforce.total_workers}</p>
+              <>
+                <div className="grid md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Workers</p>
+                    <p className="text-2xl font-semibold">{aiAnalysis.workforce.total_workers}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Hours</p>
+                    <p className="text-2xl font-semibold">{aiAnalysis.workforce.total_hours}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Man Hours</p>
+                    <p className="text-2xl font-semibold">{aiAnalysis.workforce.man_hours}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Hours</p>
-                  <p className="text-2xl font-semibold">{aiAnalysis.workforce.total_hours}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Man Hours</p>
-                  <p className="text-2xl font-semibold">{aiAnalysis.workforce.man_hours}</p>
-                </div>
-              </div>
+                {workers && workers.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Worker Names
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {workers.map((worker) => (
+                        <Badge key={worker.id} variant="secondary" data-testid={`badge-worker-${worker.id}`}>
+                          {worker.workerName}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {aiAnalysis.materials?.items_used && aiAnalysis.materials.items_used.length > 0 && (

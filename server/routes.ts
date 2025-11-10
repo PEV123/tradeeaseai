@@ -161,6 +161,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
+          // Save worker names from AI analysis
+          await storage.deleteWorkersByReport(report.id);
+          if (aiAnalysis.workforce?.worker_names && Array.isArray(aiAnalysis.workforce.worker_names)) {
+            for (const workerName of aiAnalysis.workforce.worker_names) {
+              if (workerName && typeof workerName === 'string' && workerName.trim()) {
+                await storage.createWorker({
+                  reportId: report.id,
+                  workerName: workerName.trim(),
+                  hoursWorked: null,
+                });
+              }
+            }
+          }
+
           // Update report with AI analysis
           await storage.updateReport(report.id, {
             aiAnalysis,
@@ -386,6 +400,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get workers for a report
+  app.get("/api/reports/:id/workers", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const workers = await storage.getWorkersByReport(req.params.id);
+      res.json(workers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Regenerate AI analysis and PDF for a report
   app.post("/api/reports/:id/regenerate", requireAuth, async (req: Request, res: Response) => {
     try {
@@ -435,6 +459,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 await storage.updateImage(images[i].id, { aiDescription: description });
               }
             }
+          }
+
+          // Save worker names from AI analysis
+          console.log(`🔍 Checking for worker names in AI analysis...`);
+          console.log(`Workforce data:`, JSON.stringify(aiAnalysis.workforce, null, 2));
+          await storage.deleteWorkersByReport(reportId);
+          if (aiAnalysis.workforce?.worker_names && Array.isArray(aiAnalysis.workforce.worker_names)) {
+            console.log(`✅ Found ${aiAnalysis.workforce.worker_names.length} worker names`);
+            for (const workerName of aiAnalysis.workforce.worker_names) {
+              if (workerName && typeof workerName === 'string' && workerName.trim()) {
+                console.log(`💾 Saving worker: ${workerName.trim()}`);
+                await storage.createWorker({
+                  reportId,
+                  workerName: workerName.trim(),
+                  hoursWorked: null,
+                });
+              }
+            }
+          } else {
+            console.log(`⚠️ No worker names found in AI analysis`);
           }
 
           // Update report with AI analysis

@@ -1,4 +1,4 @@
-import { type Admin, type Client, type Report, type Image, type Settings, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images, settings } from "@shared/schema";
+import { type Admin, type Client, type Report, type Image, type Settings, type Worker, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images, settings, workers } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -37,6 +37,11 @@ export interface IStorage {
   setSetting(key: string, value: string | null): Promise<void>;
   getAllSettings(): Promise<Record<string, string | null>>;
 
+  // Workers
+  getWorkersByReport(reportId: string): Promise<Worker[]>;
+  createWorker(worker: Omit<Worker, 'id' | 'createdAt'>): Promise<Worker>;
+  deleteWorkersByReport(reportId: string): Promise<void>;
+
   // Stats
   getStats(): Promise<{
     totalClients: number;
@@ -51,12 +56,14 @@ export class MemStorage implements IStorage {
   private clients: Map<string, Client>;
   private reports: Map<string, Report>;
   private images: Map<string, Image>;
+  private workers: Map<string, Worker>;
 
   constructor() {
     this.admins = new Map();
     this.clients = new Map();
     this.reports = new Map();
     this.images = new Map();
+    this.workers = new Map();
   }
 
   // Admin methods
@@ -219,6 +226,9 @@ export class MemStorage implements IStorage {
     const report = this.reports.get(id);
     if (!report) return false;
 
+    // Delete associated workers
+    await this.deleteWorkersByReport(id);
+
     // Delete associated images
     const imagesToDelete = Array.from(this.images.values()).filter(
       img => img.reportId === id
@@ -298,6 +308,30 @@ export class MemStorage implements IStorage {
       result[key] = value;
     }
     return result;
+  }
+
+  // Worker methods
+  async getWorkersByReport(reportId: string): Promise<Worker[]> {
+    return Array.from(this.workers.values()).filter(w => w.reportId === reportId);
+  }
+
+  async createWorker(workerData: Omit<Worker, 'id' | 'createdAt'>): Promise<Worker> {
+    const id = randomUUID();
+    const worker: Worker = {
+      ...workerData,
+      id,
+      createdAt: new Date(),
+    };
+    this.workers.set(id, worker);
+    return worker;
+  }
+
+  async deleteWorkersByReport(reportId: string): Promise<void> {
+    for (const [id, worker] of this.workers.entries()) {
+      if (worker.reportId === reportId) {
+        this.workers.delete(id);
+      }
+    }
   }
 
   // Stats methods
@@ -586,6 +620,29 @@ export class DbStorage implements IStorage {
       settingsObj[setting.key] = setting.value;
     }
     return settingsObj;
+  }
+
+  // Worker methods
+  async getWorkersByReport(reportId: string): Promise<Worker[]> {
+    const result = await this.db
+      .select()
+      .from(workers)
+      .where(eq(workers.reportId, reportId));
+    return result;
+  }
+
+  async createWorker(workerData: Omit<Worker, 'id' | 'createdAt'>): Promise<Worker> {
+    const result = await this.db
+      .insert(workers)
+      .values(workerData)
+      .returning();
+    return result[0];
+  }
+
+  async deleteWorkersByReport(reportId: string): Promise<void> {
+    await this.db
+      .delete(workers)
+      .where(eq(workers.reportId, reportId));
   }
 
   // Stats methods

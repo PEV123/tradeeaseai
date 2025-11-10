@@ -54,6 +54,14 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const workers = pgTable("workers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportId: varchar("report_id").notNull().references(() => reports.id, { onDelete: 'cascade' }),
+  workerName: varchar("worker_name", { length: 255 }).notNull(),
+  hoursWorked: text("hours_worked"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Admin Schema
 export const adminSchema = z.object({
   id: z.string(),
@@ -184,6 +192,24 @@ export const updateSettingsSchema = z.object({
 export type Settings = z.infer<typeof settingsSchema>;
 export type InsertSettings = z.infer<typeof insertSettingsSchema>;
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>;
+
+// Worker Schema
+export const workerSchema = z.object({
+  id: z.string(),
+  reportId: z.string(),
+  workerName: z.string(),
+  hoursWorked: z.string().nullable(),
+  createdAt: z.date(),
+});
+
+export const insertWorkerSchema = z.object({
+  reportId: z.string(),
+  workerName: z.string().min(1, "Worker name is required"),
+  hoursWorked: z.string().optional(),
+});
+
+export type Worker = z.infer<typeof workerSchema>;
+export type InsertWorker = z.infer<typeof insertWorkerSchema>;
 
 // API Response Types
 export type AuthResponse = {
