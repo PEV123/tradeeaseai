@@ -1,4 +1,51 @@
 import { z } from "zod";
+import { pgTable, varchar, text, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
+
+// Drizzle Tables
+export const admins = pgTable("admins", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: varchar("username", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const clients = pgTable("clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyName: varchar("company_name", { length: 255 }).notNull(),
+  contactName: varchar("contact_name", { length: 255 }).notNull(),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  notificationEmails: text("notification_emails").array().notNull(),
+  logoPath: varchar("logo_path", { length: 500 }),
+  brandColor: varchar("brand_color", { length: 7 }).notNull().default("#E8764B"),
+  formSlug: varchar("form_slug", { length: 100 }).notNull().unique(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const reports = pgTable("reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  reportDate: timestamp("report_date").notNull(),
+  projectName: varchar("project_name", { length: 255 }).notNull(),
+  formData: jsonb("form_data").notNull(),
+  aiAnalysis: jsonb("ai_analysis"),
+  pdfPath: varchar("pdf_path", { length: 500 }),
+  status: varchar("status", { length: 50 }).notNull().default("processing"),
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  processedAt: timestamp("processed_at"),
+});
+
+export const images = pgTable("images", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reportId: varchar("report_id").notNull().references(() => reports.id),
+  filePath: varchar("file_path", { length: 500 }).notNull(),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  aiDescription: text("ai_description"),
+  imageOrder: integer("image_order").notNull(),
+  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+});
 
 // Admin Schema
 export const adminSchema = z.object({

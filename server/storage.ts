@@ -1,5 +1,8 @@
-import { type Admin, type Client, type Report, type Image, type ClientWithReportCount, type ReportWithClient } from "@shared/schema";
+import { type Admin, type Client, type Report, type Image, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { eq, and, gte, lte, sql as drizzleSql } from "drizzle-orm";
 
 export interface IStorage {
   // Admin
@@ -244,4 +247,223 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DbStorage implements IStorage {
+  private db;
+
+  constructor() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL environment variable is required");
+    }
+    const connection = neon(process.env.DATABASE_URL);
+    this.db = drizzle(connection);
+  }
+
+  // Admin methods
+  async getAdmin(id: string): Promise<Admin | undefined> {
+    const result = await this.db.select().from(admins).where(eq(admins.id, id));
+    return result[0];
+  }
+
+  async getAdminByUsername(username: string): Promise<Admin | undefined> {
+    const result = await this.db.select().from(admins).where(eq(admins.username, username));
+    return result[0];
+  }
+
+  async createAdmin(username: string, passwordHash: string): Promise<Admin> {
+    const result = await this.db
+      .insert(admins)
+      .values({ username, passwordHash })
+      .returning();
+    return result[0];
+  }
+
+  // Client methods
+  async getClient(id: string): Promise<Client | undefined> {
+    const result = await this.db.select().from(clients).where(eq(clients.id, id));
+    return result[0];
+  }
+
+  async getClientBySlug(slug: string): Promise<Client | undefined> {
+    const result = await this.db.select().from(clients).where(eq(clients.formSlug, slug));
+    return result[0];
+  }
+
+  async getAllClients(): Promise<ClientWithReportCount[]> {
+    const allClients = await this.db.select().from(clients);
+    const clientsWithCounts = await Promise.all(
+      allClients.map(async (client) => {
+        const reportCount = await this.db
+          .select({ count: drizzleSql<number>`count(*)` })
+          .from(reports)
+          .where(eq(reports.clientId, client.id));
+        return {
+          ...client,
+          reportCount: Number(reportCount[0]?.count || 0),
+        };
+      })
+    );
+    return clientsWithCounts;
+  }
+
+  async createClient(clientData: Omit<Client, 'id' | 'createdAt'>): Promise<Client> {
+    const result = await this.db
+      .insert(clients)
+      .values(clientData)
+      .returning();
+    return result[0];
+  }
+
+  async updateClient(id: string, clientData: Partial<Omit<Client, 'id' | 'createdAt'>>): Promise<Client | undefined> {
+    const result = await this.db
+      .update(clients)
+      .set(clientData)
+      .where(eq(clients.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    const result = await this.db.delete(clients).where(eq(clients.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Report methods
+  async getReport(id: string): Promise<ReportWithClient | undefined> {
+    const reportResult = await this.db.select().from(reports).where(eq(reports.id, id));
+    if (!reportResult[0]) return undefined;
+
+    const report = reportResult[0] as Report;
+    const clientResult = await this.getClient(report.clientId);
+    if (!clientResult) return undefined;
+
+    const imageList = await this.getImagesByReport(id);
+    return { ...report, client: clientResult, images: imageList };
+  }
+
+  async getAllReports(): Promise<ReportWithClient[]> {
+    const allReports = await this.db.select().from(reports);
+    const reportsWithData = await Promise.all(
+      allReports.map(async (report) => {
+        const typedReport = report as Report;
+        const client = await this.getClient(typedReport.clientId);
+        const imageList = await this.getImagesByReport(typedReport.id);
+        return client ? { ...typedReport, client, images: imageList } : null;
+      })
+    );
+    return reportsWithData.filter((r): r is ReportWithClient => r !== null);
+  }
+
+  async getReportsByClient(clientId: string): Promise<ReportWithClient[]> {
+    const clientReports = await this.db
+      .select()
+      .from(reports)
+      .where(eq(reports.clientId, clientId));
+    
+    const client = await this.getClient(clientId);
+    if (!client) return [];
+
+    const reportsWithData = await Promise.all(
+      clientReports.map(async (report) => {
+        const typedReport = report as Report;
+        const imageList = await this.getImagesByReport(typedReport.id);
+        return { ...typedReport, client, images: imageList };
+      })
+    );
+    return reportsWithData;
+  }
+
+  async createReport(reportData: Omit<Report, 'id' | 'submittedAt' | 'processedAt'>): Promise<Report> {
+    const result = await this.db
+      .insert(reports)
+      .values({ ...reportData, processedAt: null })
+      .returning();
+    return result[0] as Report;
+  }
+
+  async updateReport(id: string, reportData: Partial<Omit<Report, 'id' | 'clientId' | 'submittedAt'>>): Promise<Report | undefined> {
+    const result = await this.db
+      .update(reports)
+      .set(reportData)
+      .where(eq(reports.id, id))
+      .returning();
+    return result[0] as Report | undefined;
+  }
+
+  // Image methods
+  async getImage(id: string): Promise<Image | undefined> {
+    const result = await this.db.select().from(images).where(eq(images.id, id));
+    return result[0];
+  }
+
+  async getImagesByReport(reportId: string): Promise<Image[]> {
+    const result = await this.db
+      .select()
+      .from(images)
+      .where(eq(images.reportId, reportId))
+      .orderBy(images.imageOrder);
+    return result;
+  }
+
+  async createImage(imageData: Omit<Image, 'id' | 'uploadedAt'>): Promise<Image> {
+    const result = await this.db
+      .insert(images)
+      .values(imageData)
+      .returning();
+    return result[0];
+  }
+
+  async updateImage(id: string, imageData: Partial<Omit<Image, 'id' | 'reportId' | 'uploadedAt'>>): Promise<Image | undefined> {
+    const result = await this.db
+      .update(images)
+      .set(imageData)
+      .where(eq(images.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Stats methods
+  async getStats(): Promise<{
+    totalClients: number;
+    totalReports: number;
+    processingReports: number;
+    completedToday: number;
+  }> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const clientCount = await this.db
+      .select({ count: drizzleSql<number>`count(*)` })
+      .from(clients);
+
+    const reportCount = await this.db
+      .select({ count: drizzleSql<number>`count(*)` })
+      .from(reports);
+
+    const processingCount = await this.db
+      .select({ count: drizzleSql<number>`count(*)` })
+      .from(reports)
+      .where(eq(reports.status, "processing"));
+
+    const completedTodayCount = await this.db
+      .select({ count: drizzleSql<number>`count(*)` })
+      .from(reports)
+      .where(
+        and(
+          eq(reports.status, "completed"),
+          gte(reports.submittedAt, today),
+          lte(reports.submittedAt, tomorrow)
+        )
+      );
+
+    return {
+      totalClients: Number(clientCount[0]?.count || 0),
+      totalReports: Number(reportCount[0]?.count || 0),
+      processingReports: Number(processingCount[0]?.count || 0),
+      completedToday: Number(completedTodayCount[0]?.count || 0),
+    };
+  }
+}
+
+export const storage = new DbStorage();

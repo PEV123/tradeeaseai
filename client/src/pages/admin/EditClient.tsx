@@ -26,8 +26,12 @@ export default function EditClient() {
         formData.append("logo", logoFile);
       }
 
+      const token = localStorage.getItem("admin_token");
       const response = await fetch(`/api/admin/clients/${params?.id}`, {
         method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
         body: formData,
       });
 

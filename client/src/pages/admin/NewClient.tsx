@@ -22,8 +22,12 @@ export default function NewClient() {
         formData.append("logo", logoFile);
       }
 
+      const token = localStorage.getItem("admin_token");
       const response = await fetch("/api/admin/clients", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
         body: formData,
       });
 

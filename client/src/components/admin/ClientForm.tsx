@@ -1,4 +1,4 @@
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertClientSchema, type InsertClient, type Client } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,6 @@ interface ClientFormProps {
 }
 
 export default function ClientForm({ client, onSubmit, onCancel, isLoading = false }: ClientFormProps) {
-  const [emails, setEmails] = useState<string[]>(client?.notificationEmails || [""]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(client?.logoPath || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,11 +27,18 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
       companyName: client?.companyName || "",
       contactName: client?.contactName || "",
       contactEmail: client?.contactEmail || "",
-      notificationEmails: client?.notificationEmails || [],
+      notificationEmails: client?.notificationEmails && client.notificationEmails.length > 0 
+        ? client.notificationEmails 
+        : [""],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
       active: client?.active ?? true,
     },
+  });
+
+  const { fields, append, remove } = useFieldArray<InsertClient, "notificationEmails", "id">({
+    control: form.control,
+    name: "notificationEmails",
   });
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,26 +53,9 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
     }
   };
 
-  const addEmail = () => {
-    setEmails([...emails, ""]);
-  };
-
-  const removeEmail = (index: number) => {
-    if (emails.length > 1) {
-      setEmails(emails.filter((_, i) => i !== index));
-    }
-  };
-
-  const updateEmail = (index: number, value: string) => {
-    const newEmails = [...emails];
-    newEmails[index] = value;
-    setEmails(newEmails);
-  };
-
   const handleSubmit = async (data: InsertClient) => {
-    const validEmails = emails.filter(e => e.trim() !== "");
-    const formData = { ...data, notificationEmails: validEmails };
-    await onSubmit(formData, logoFile || undefined);
+    console.log("[ClientForm] handleSubmit called with data:", data);
+    await onSubmit(data, logoFile || undefined);
   };
 
   const generateSlug = () => {
@@ -253,23 +242,22 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
           <CardDescription>Email addresses that will receive PDF reports</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {emails.map((email, index) => (
-            <div key={index} className="flex gap-2">
+          {fields.map((field, index) => (
+            <div key={field.id} className="flex gap-2">
               <Input
-                value={email}
-                onChange={(e) => updateEmail(index, e.target.value)}
+                {...form.register(`notificationEmails.${index}` as const)}
                 placeholder="email@example.com"
                 type="email"
                 disabled={isLoading}
                 data-testid={`input-notification-email-${index}`}
                 className="flex-1"
               />
-              {emails.length > 1 && (
+              {fields.length > 1 && (
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
-                  onClick={() => removeEmail(index)}
+                  onClick={() => remove(index)}
                   disabled={isLoading}
                   data-testid={`button-remove-email-${index}`}
                 >
@@ -278,10 +266,15 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
               )}
             </div>
           ))}
+          {form.formState.errors.notificationEmails && (
+            <p className="text-sm text-destructive">
+              {form.formState.errors.notificationEmails.message || "Please provide at least one valid email"}
+            </p>
+          )}
           <Button
             type="button"
             variant="outline"
-            onClick={addEmail}
+            onClick={() => append("")}
             disabled={isLoading}
             data-testid="button-add-email"
           >
