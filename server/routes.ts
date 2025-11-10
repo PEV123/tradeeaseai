@@ -119,14 +119,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } catch (sharpError) {
             console.warn(`Sharp processing failed for image ${i}, saving raw file:`, sharpError);
             // Fallback: save raw buffer directly
-            const fs = await import('fs/promises');
-            await fs.writeFile(filePath, file.buffer);
-            fileWriteSuccess = true;
+            try {
+              const fs = await import('fs/promises');
+              await fs.writeFile(filePath, file.buffer);
+              fileWriteSuccess = true;
+            } catch (writeError) {
+              console.error(`CRITICAL: Failed to write image ${i} to disk:`, writeError);
+              fileWriteSuccess = false;
+            }
           }
 
-          // Only create database record if file was actually written
+          // Verify file was actually written to disk
           if (!fileWriteSuccess) {
-            throw new Error(`Failed to write image file ${i} to disk`);
+            throw new Error(`Failed to write image file ${i} to disk - file write operation failed`);
+          }
+          
+          // Double-check file exists on disk
+          const fs = await import('fs/promises');
+          try {
+            await fs.access(filePath);
+          } catch (accessError) {
+            throw new Error(`Failed to write image file ${i} to disk - file does not exist after write operation`);
           }
 
           // Convert to base64 for GPT-5
