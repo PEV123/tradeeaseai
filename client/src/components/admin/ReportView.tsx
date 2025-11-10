@@ -4,15 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface ReportViewProps {
   report: ReportWithClient;
   onDownloadPdf?: () => void;
+  onRegenerate?: () => void;
+  isRegenerating?: boolean;
 }
 
-export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
+export default function ReportView({ report, onDownloadPdf, onRegenerate, isRegenerating }: ReportViewProps) {
   const { client, formData, aiAnalysis } = report;
   const [selectedImage, setSelectedImage] = useState<{ src: string; description: string } | null>(null);
 
@@ -87,8 +89,32 @@ export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
       {/* Form Data */}
       <Card>
         <CardHeader>
-          <CardTitle>Submitted Information</CardTitle>
-          <CardDescription>Data entered by site worker</CardDescription>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle>Submitted Information</CardTitle>
+              <CardDescription>Data entered by site worker</CardDescription>
+            </div>
+            {onRegenerate && (
+              <Button 
+                onClick={onRegenerate} 
+                variant="outline"
+                disabled={isRegenerating || report.status === "processing"}
+                data-testid="button-regenerate"
+              >
+                {isRegenerating || report.status === "processing" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Regenerate AI Analysis and PDF
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>

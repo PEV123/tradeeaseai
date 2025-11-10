@@ -386,6 +386,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Regenerate AI analysis and PDF for a report
+  app.post("/api/reports/:id/regenerate", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const reportId = req.params.id;
+      const report = await storage.getReport(reportId);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      const client = await storage.getClient(report.clientId);
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      // Get images and convert to base64
+      const images = await storage.getImagesByReport(reportId);
+      const imageBase64Array: string[] = [];
+      
+      for (const image of images) {
+        try {
+          const fs = await import('fs/promises');
+          const imageBuffer = await fs.readFile(image.filePath);
+          const base64 = imageBuffer.toString('base64');
+          imageBase64Array.push(base64);
+        } catch (error) {
+          console.error(`Failed to read image ${image.filePath}:`, error);
+        }
+      }
+
+      // Update status to processing
+      await storage.updateReport(reportId, { status: "processing" });
+
+      // Process in background
+      (async () => {
+        try {
+          console.log(`🔄 Regenerating AI analysis for report ${reportId}...`);
+
+          // Analyze with GPT-5
+          const aiAnalysis = await analyzeReport(report.formData, imageBase64Array);
+
+          // Update image descriptions from AI
+          if (aiAnalysis.photo_documentation?.image_descriptions) {
+            for (let i = 0; i < images.length; i++) {
+              const description = aiAnalysis.photo_documentation.image_descriptions[i];
+              if (description) {
+                await storage.updateImage(images[i].id, { aiDescription: description });
+              }
+            }
+          }
+
+          // Update report with AI analysis
+          await storage.updateReport(reportId, {
+            aiAnalysis,
+            processedAt: new Date(),
+          });
+
+          console.log(`✅ AI analysis completed, generating PDF...`);
+
+          // Generate PDF
+          const updatedReport = await storage.getReport(reportId);
+          if (updatedReport) {
+            const pdfPath = await generatePDF(updatedReport, client, images);
+
+            // Update report with PDF path and mark as completed
+            await storage.updateReport(reportId, {
+              pdfPath,
+              status: "completed",
+            });
+
+            console.log(`✅ PDF generated, sending email...`);
+
+            // Send email notification
+            await sendReportEmail(client, reportId, report.projectName, new Date(report.reportDate), pdfPath);
+
+            console.log(`✅ Report ${reportId} regenerated successfully`);
+          }
+        } catch (error: any) {
+          console.error("Error regenerating report:", error);
+          await storage.updateReport(reportId, {
+            status: "failed",
+            processedAt: new Date(),
+          });
+        }
+      })();
+
+      res.json({ success: true, message: "Report regeneration started" });
+    } catch (error: any) {
+      console.error("Error starting report regeneration:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Download PDF (protected)
   app.get("/api/reports/download/:id", requireAuth, async (req: Request, res: Response) => {
     try {

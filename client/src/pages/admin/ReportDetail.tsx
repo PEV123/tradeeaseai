@@ -1,16 +1,41 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { type ReportWithClient } from "@shared/schema";
 import ReportView from "@/components/admin/ReportView";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ReportDetail() {
   const [, params] = useRoute("/admin/reports/:id");
+  const { toast } = useToast();
 
   const { data: report, isLoading } = useQuery<ReportWithClient>({
     queryKey: [`/api/reports/${params?.id}`],
     enabled: !!params?.id,
+  });
+
+  const regenerateMutation = useMutation({
+    mutationFn: async () => {
+      if (!params?.id) throw new Error("No report ID");
+      return await apiRequest("POST", `/api/reports/${params.id}/regenerate`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/reports/${params?.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
+      toast({
+        title: "Regeneration started",
+        description: "The AI analysis and PDF are being regenerated. This may take a few moments.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to regenerate report",
+      });
+    },
   });
 
   const handleDownloadPdf = async () => {
@@ -63,7 +88,12 @@ export default function ReportDetail() {
         </div>
       </div>
 
-      <ReportView report={report} onDownloadPdf={handleDownloadPdf} />
+      <ReportView 
+        report={report} 
+        onDownloadPdf={handleDownloadPdf}
+        onRegenerate={() => regenerateMutation.mutate()}
+        isRegenerating={regenerateMutation.isPending}
+      />
     </div>
   );
 }
