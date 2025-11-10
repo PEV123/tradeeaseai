@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { type ReportWithClient } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -12,6 +14,7 @@ interface ReportViewProps {
 
 export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
   const { client, formData, aiAnalysis } = report;
+  const [selectedImage, setSelectedImage] = useState<{ src: string; description: string } | null>(null);
 
   return (
     <div className="space-y-6">
@@ -222,7 +225,15 @@ export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {report.images.map((image) => (
-                <div key={image.id} className="group relative aspect-square rounded-lg overflow-hidden bg-muted">
+                <div 
+                  key={image.id} 
+                  className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover-elevate active-elevate-2"
+                  onClick={() => setSelectedImage({ 
+                    src: `/${image.filePath}`, 
+                    description: image.aiDescription || image.fileName 
+                  })}
+                  data-testid={`button-view-image-${image.id}`}
+                >
                   <img
                     src={`/${image.filePath}`}
                     alt={image.aiDescription || image.fileName}
@@ -240,6 +251,27 @@ export default function ReportView({ report, onDownloadPdf }: ReportViewProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Image Modal */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Site Photo</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="space-y-4">
+              <img
+                src={selectedImage.src}
+                alt={selectedImage.description}
+                className="w-full h-auto rounded-lg"
+              />
+              {selectedImage.description && (
+                <p className="text-sm text-muted-foreground">{selectedImage.description}</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
