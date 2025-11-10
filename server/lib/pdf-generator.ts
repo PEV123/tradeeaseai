@@ -43,9 +43,28 @@ export async function generatePDF(
 
   const html = generateReportHTML(report, client, imagesWithBase64, logoBase64);
 
+  // Find Chromium executable path
+  let chromiumPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (!chromiumPath) {
+    try {
+      const { execSync } = await import('child_process');
+      chromiumPath = execSync('which chromium || which chromium-browser', { encoding: 'utf-8' }).trim();
+    } catch {
+      // Fallback to known Nix store path
+      chromiumPath = '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium';
+    }
+  }
+
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    executablePath: chromiumPath,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-software-rasterizer'
+    ],
   });
 
   const page = await browser.newPage();
