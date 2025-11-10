@@ -15,19 +15,22 @@ import Reports from "@/pages/admin/Reports";
 import ReportDetail from "@/pages/admin/ReportDetail";
 import PublicForm from "@/pages/public/PublicForm";
 
-function AdminRouter() {
+function ProtectedRoute({ component: Component }: { component: any }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("admin_token"));
   const [location, setLocation] = useLocation();
 
   useEffect(() => {
     if (token) {
       localStorage.setItem("admin_token", token);
-      // Redirect to clients if we're just at /admin
-      if (location === "/admin" || location === "/admin/") {
-        setLocation("/admin/clients");
-      }
     } else {
       localStorage.removeItem("admin_token");
+    }
+  }, [token]);
+
+  useEffect(() => {
+    // Redirect to clients if we're just at /admin
+    if (token && (location === "/admin" || location === "/admin/")) {
+      setLocation("/admin/clients");
     }
   }, [token, location, setLocation]);
 
@@ -42,32 +45,8 @@ function AdminRouter() {
 
   return (
     <AdminLayout onLogout={handleLogout}>
-      <Switch>
-        <Route path="/admin/dashboard" component={Dashboard} />
-        <Route path="/admin/clients" component={Clients} />
-        <Route path="/admin/clients/new" component={NewClient} />
-        <Route path="/admin/clients/:id/edit" component={EditClient} />
-        <Route path="/admin/reports" component={Reports} />
-        <Route path="/admin/reports/:id" component={ReportDetail} />
-        <Route path="/admin*">
-          <Redirect to="/admin/clients" />
-        </Route>
-      </Switch>
+      <Component />
     </AdminLayout>
-  );
-}
-
-function Router() {
-  return (
-    <Switch>
-      <Route path="/form/:slug" component={PublicForm} />
-      <Route path="/admin" component={AdminRouter} />
-      <Route path="/admin/:rest*" component={AdminRouter} />
-      <Route path="/">
-        <Redirect to="/admin" />
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
   );
 }
 
@@ -76,7 +55,34 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+        <Switch>
+          <Route path="/form/:slug" component={PublicForm} />
+          <Route path="/admin/dashboard">
+            {() => <ProtectedRoute component={Dashboard} />}
+          </Route>
+          <Route path="/admin/clients/new">
+            {() => <ProtectedRoute component={NewClient} />}
+          </Route>
+          <Route path="/admin/clients/:id/edit">
+            {() => <ProtectedRoute component={EditClient} />}
+          </Route>
+          <Route path="/admin/clients">
+            {() => <ProtectedRoute component={Clients} />}
+          </Route>
+          <Route path="/admin/reports/:id">
+            {() => <ProtectedRoute component={ReportDetail} />}
+          </Route>
+          <Route path="/admin/reports">
+            {() => <ProtectedRoute component={Reports} />}
+          </Route>
+          <Route path="/admin">
+            {() => <ProtectedRoute component={Clients} />}
+          </Route>
+          <Route path="/">
+            <Redirect to="/admin" />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
       </TooltipProvider>
     </QueryClientProvider>
   );
