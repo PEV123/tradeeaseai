@@ -36,7 +36,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
     },
   });
 
-  const { fields, append, remove } = useFieldArray<InsertClient, "notificationEmails", "id">({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "notificationEmails",
   });

@@ -97,28 +97,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileName = `${report.id}_${i}_${Date.now()}.jpg`;
-        const filePath = path.join('storage', 'images', fileName);
+        
+        try {
+          // Determine file extension from mimetype
+          let ext = 'jpg';
+          if (file.mimetype === 'image/png') ext = 'png';
+          else if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') ext = 'jpg';
+          else if (file.mimetype === 'image/webp') ext = 'webp';
+          
+          const fileName = `${report.id}_${i}_${Date.now()}.${ext}`;
+          const filePath = path.join('storage', 'images', fileName);
 
-        // Process image with sharp
-        await sharp(file.buffer)
-          .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 85 })
-          .toFile(filePath);
+          // Try to process with Sharp for optimization, fallback to raw save if it fails
+          try {
+            await sharp(file.buffer)
+              .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
+              .jpeg({ quality: 85 })
+              .toFile(filePath);
+          } catch (sharpError) {
+            console.warn(`Sharp processing failed for image ${i}, saving raw file:`, sharpError);
+            // Fallback: save raw buffer directly
+            const fs = await import('fs/promises');
+            await fs.writeFile(filePath, file.buffer);
+          }
 
-        // Convert to base64 for GPT-5
-        const base64 = file.buffer.toString('base64');
-        imageBase64Array.push(base64);
-        imagePaths.push(filePath);
+          // Convert to base64 for GPT-5
+          const base64 = file.buffer.toString('base64');
+          imageBase64Array.push(base64);
+          imagePaths.push(filePath);
 
-        // Save image record
-        await storage.createImage({
-          reportId: report.id,
-          filePath,
-          fileName,
-          aiDescription: null,
-          imageOrder: i,
-        });
+          // Save image record
+          await storage.createImage({
+            reportId: report.id,
+            filePath,
+            fileName,
+            aiDescription: null,
+            imageOrder: i,
+          });
+        } catch (imageError) {
+          console.error(`Error processing image ${i}:`, imageError);
+          // Continue processing other images even if one fails
+        }
       }
 
       // Process in background
