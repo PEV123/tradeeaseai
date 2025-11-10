@@ -42,7 +42,13 @@ export default function ReportDetail() {
     if (!params?.id) return;
     
     try {
-      const response = await fetch(`/api/reports/download/${params.id}`);
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/reports/download/${params.id}`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+      
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -53,9 +59,20 @@ export default function ReportDetail() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to download PDF",
+        });
       }
     } catch (error) {
       console.error("Failed to download PDF:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to download PDF",
+      });
     }
   };
 
