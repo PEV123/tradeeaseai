@@ -68,7 +68,7 @@ export async function generatePDF(
   });
 
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: 'networkidle0' });
+  await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
   const pdfDir = path.join(process.cwd(), 'storage', 'pdfs');
   await fs.mkdir(pdfDir, { recursive: true });
