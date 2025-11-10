@@ -52,10 +52,11 @@ Preferred communication style: Simple, everyday language.
 
 **Framework**: Express.js server with TypeScript
 
-**Database**: In-memory storage implementation (MemStorage class)
-- Interface-based design (IStorage) allows easy swapping to persistent storage
-- Data models: Admin, Client, Report, Image
-- Drizzle ORM configuration present but not actively used (PostgreSQL configured for future migration)
+**Database**: PostgreSQL with Drizzle ORM (DbStorage class)
+- Production storage using Neon Database (@neondatabase/serverless)
+- Interface-based design (IStorage) allows easy swapping between storage implementations
+- Data models: Admin, Client, Report, Image (all tables created via Drizzle migrations)
+- Full CRUD operations with type-safe queries using Drizzle ORM
 
 **Authentication**: Simple JWT-based authentication for admin users
 - bcryptjs for password hashing
@@ -179,12 +180,14 @@ Preferred communication style: Simple, everyday language.
   - `SMTP_FROM` (optional, default: noreply@tradeaseai.com)
 - **Provider-agnostic**: Works with any SMTP service (Gmail, SendGrid, etc.)
 
-### Database (Future Migration)
-- **Current State**: In-memory storage (MemStorage class)
-- **Configured For**: PostgreSQL via Neon Database (@neondatabase/serverless)
-- **ORM**: Drizzle Kit configured but not actively used
-- **Migration Path**: IStorage interface allows seamless transition to persistent database
+### Database
+- **Current State**: PostgreSQL database fully operational (DbStorage class)
+- **Provider**: Neon Database (@neondatabase/serverless)
+- **ORM**: Drizzle ORM with type-safe queries and schema management
+- **Tables**: admins, clients, reports, images (all with proper foreign key relationships)
+- **Migration**: Completed migration from MemStorage to DbStorage on November 10, 2025
 - **Configuration**: `DATABASE_URL` environment variable in drizzle.config.ts
+- **Schema Management**: `npm run db:push` for schema synchronization
 
 ### CDN Resources
 - **Google Fonts**: Inter font family loaded via CDN in HTML
@@ -196,7 +199,7 @@ Preferred communication style: Simple, everyday language.
 - **File Processing**: multer, sharp
 - **PDF Generation**: puppeteer
 - **Email**: nodemailer
-- **Database**: @neondatabase/serverless (configured but not used), drizzle-orm
+- **Database**: @neondatabase/serverless (active), drizzle-orm (active), drizzle-kit
 - **Frontend UI**: Radix UI component primitives (20+ packages)
 - **Frontend State**: @tanstack/react-query
 - **Form Handling**: react-hook-form, @hookform/resolvers, zod
