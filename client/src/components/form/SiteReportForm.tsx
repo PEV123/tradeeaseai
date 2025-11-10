@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import ImageUpload from "./ImageUpload";
+import logoUrl from "@assets/tradeaseai-logo_1762739159026.png";
 
 interface SiteReportFormProps {
   client: Client;
@@ -332,6 +333,16 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
             </Button>
           </div>
         </form>
+
+        {/* Powered by footer */}
+        <div className="text-center py-8 border-t mt-12">
+          <p className="text-sm text-muted-foreground mb-3">Powered by</p>
+          <img 
+            src={logoUrl} 
+            alt="TradeaseAI" 
+            className="h-6 mx-auto opacity-60"
+          />
+        </div>
       </div>
     </div>
   );

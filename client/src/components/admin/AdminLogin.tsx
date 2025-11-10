@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import logoUrl from "@assets/tradeaseai-logo_1762739159026.png";
 
 interface AdminLoginProps {
   onLoginSuccess: (token: string) => void;
@@ -66,7 +67,7 @@ export default function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-4">
           <img 
-            src="/attached_assets/tradeaseai-logo_1762730095945.png" 
+            src={logoUrl} 
             alt="TradeaseAI" 
             className="h-16 mx-auto"
           />

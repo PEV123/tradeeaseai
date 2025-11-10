@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Building2, FileText, Users, LogOut, LayoutDashboard } from "lucide-react";
+import logoUrl from "@assets/tradeaseai-logo_1762739159026.png";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -30,7 +31,7 @@ export default function AdminLayout({ children, onLogout }: AdminLayoutProps) {
         {/* Logo */}
         <div className="h-16 border-b px-6 flex items-center">
           <img 
-            src="/attached_assets/tradeaseai-logo_1762730095945.png" 
+            src={logoUrl} 
             alt="TradeaseAI" 
             className="h-8"
           />
