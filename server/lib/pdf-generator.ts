@@ -8,7 +8,40 @@ export async function generatePDF(
   client: Client,
   images: Image[]
 ): Promise<string> {
-  const html = generateReportHTML(report, client, images);
+  // Convert images to base64 for reliable embedding in PDF
+  const imagesWithBase64 = await Promise.all(
+    images.map(async (img) => {
+      try {
+        const imagePath = path.join(process.cwd(), img.filePath);
+        const imageBuffer = await fs.readFile(imagePath);
+        const base64 = imageBuffer.toString('base64');
+        const mimeType = img.fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        return {
+          ...img,
+          base64DataUrl: `data:${mimeType};base64,${base64}`
+        };
+      } catch (error) {
+        console.error(`Failed to read image ${img.filePath}:`, error);
+        return { ...img, base64DataUrl: '' };
+      }
+    })
+  );
+
+  // Convert logo to base64
+  let logoBase64 = '';
+  if (client.logoPath) {
+    try {
+      const logoPath = path.join(process.cwd(), client.logoPath);
+      const logoBuffer = await fs.readFile(logoPath);
+      const base64 = logoBuffer.toString('base64');
+      const mimeType = client.logoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+      logoBase64 = `data:${mimeType};base64,${base64}`;
+    } catch (error) {
+      console.error(`Failed to read logo ${client.logoPath}:`, error);
+    }
+  }
+
+  const html = generateReportHTML(report, client, imagesWithBase64, logoBase64);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -35,11 +68,13 @@ export async function generatePDF(
   return pdfPath;
 }
 
-function generateReportHTML(report: Report, client: Client, images: Image[]): string {
+function generateReportHTML(
+  report: Report, 
+  client: Client, 
+  images: Array<Image & { base64DataUrl?: string }>,
+  logoBase64: string
+): string {
   const aiAnalysis = report.aiAnalysis || {};
-  const logoPath = client.logoPath
-    ? `file://${path.join(process.cwd(), client.logoPath)}`
-    : '';
 
   return `
 <!DOCTYPE html>
@@ -217,7 +252,7 @@ function generateReportHTML(report: Report, client: Client, images: Image[]): st
 </head>
 <body>
   <div class="header">
-    ${logoPath ? `<img src="${logoPath}" class="logo" />` : ''}
+    ${logoBase64 ? `<img src="${logoBase64}" class="logo" />` : ''}
     <div class="company-name">${client.companyName}</div>
     <div class="report-title">Daily Construction Site Report</div>
   </div>
@@ -344,7 +379,7 @@ function generateReportHTML(report: Report, client: Client, images: Image[]): st
     <div class="images-grid">
       ${images.map((img) => `
         <div class="image-container">
-          <img src="file://${path.join(process.cwd(), img.filePath)}" />
+          ${img.base64DataUrl ? `<img src="${img.base64DataUrl}" />` : ''}
           ${img.aiDescription ? `<div class="image-caption">${img.aiDescription}</div>` : ''}
         </div>
       `).join('')}
