@@ -43,7 +43,10 @@ export default function ReportView({ report, onDownloadPdf, onRegenerate, isRege
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={report.status === "completed" ? "default" : report.status === "processing" ? "secondary" : "destructive"}>
+          <Badge 
+            variant={report.status === "completed" ? "outline" : report.status === "processing" ? "secondary" : "destructive"}
+            className={report.status === "completed" ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800" : ""}
+          >
             {report.status}
           </Badge>
           {report.pdfPath && onDownloadPdf && (
