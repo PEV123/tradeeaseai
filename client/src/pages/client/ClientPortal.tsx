@@ -98,7 +98,7 @@ export default function ClientPortal({ clientId, client, onLogout }: ClientPorta
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge variant="default" data-testid={`status-completed`}>Completed</Badge>;
+        return <Badge className="bg-green-600 hover:bg-green-700 text-white" data-testid={`status-completed`}>Completed</Badge>;
       case "processing":
         return <Badge variant="secondary" data-testid={`status-processing`}>Processing</Badge>;
       case "failed":

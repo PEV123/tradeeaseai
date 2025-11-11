@@ -83,8 +83,8 @@ export default function ClientLogin({ onLoginSuccess }: ClientLoginProps) {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-primary/10 p-3">
-              <Building2 className="h-8 w-8 text-primary" data-testid="icon-building" />
+            <div className="rounded-full bg-orange-100 dark:bg-orange-950 p-3">
+              <Building2 className="h-8 w-8 text-orange-600 dark:text-orange-400" data-testid="icon-building" />
             </div>
           </div>
           <CardTitle className="text-2xl" data-testid="text-title">Client Portal</CardTitle>
@@ -135,7 +135,7 @@ export default function ClientLogin({ onLoginSuccess }: ClientLoginProps) {
               />
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white"
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >

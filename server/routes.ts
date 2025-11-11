@@ -491,7 +491,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "PDF not yet generated" });
       }
 
-      const pdfFilePath = path.join(process.cwd(), report.pdfPath);
+      // Use pdfPath as-is if it's absolute, otherwise join with cwd
+      const pdfFilePath = path.isAbsolute(report.pdfPath) 
+        ? report.pdfPath 
+        : path.join(process.cwd(), report.pdfPath);
       
       try {
         await fs.access(pdfFilePath);
