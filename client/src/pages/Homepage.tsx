@@ -59,7 +59,7 @@ export default function Homepage() {
               Log your daily construction activities and get professional PDF reports instantly. At job completion, receive a comprehensive spreadsheet with all project details.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link href="/admin">
+              <Link href="/client/login">
                 <Button 
                   size="lg" 
                   className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-8 py-6 h-auto"
@@ -69,14 +69,14 @@ export default function Homepage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/client/login">
+              <Link href="/admin">
                 <Button 
                   size="lg" 
                   variant="outline" 
                   className="bg-white/10 backdrop-blur-sm text-white border-white/30 hover:bg-white hover:text-orange-600 text-lg px-8 py-6 h-auto"
                   data-testid="button-view-portal-hero"
                 >
-                  View Client Portal
+                  Admin Login
                 </Button>
               </Link>
             </div>
@@ -234,7 +234,7 @@ export default function Homepage() {
           <p className="text-xl text-white/80 mb-8">
             Log daily work, get instant reports, and export comprehensive project data when the job is done
           </p>
-          <Link href="/admin">
+          <Link href="/client/login">
             <Button 
               size="lg" 
               className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-10 py-6 h-auto"
