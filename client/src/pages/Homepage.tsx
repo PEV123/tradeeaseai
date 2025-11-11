@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Zap, Mail, Brain, Users, Shield, Building2 } from "lucide-react";
+import logoUrl from "@assets/tradeeaseai-logo_1762856519098.png";
 
 export default function Homepage() {
   return (
@@ -10,9 +11,8 @@ export default function Homepage() {
       <div className="relative bg-gradient-to-br from-orange-600 to-orange-800 text-white">
         <div className="container mx-auto px-6 py-20 max-w-6xl">
           <div className="text-center space-y-6">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <Building2 className="h-12 w-12" />
-              <h1 className="text-5xl font-bold">TradeaseAI</h1>
+            <div className="flex items-center justify-center mb-4">
+              <img src={logoUrl} alt="TradeaseAI" className="h-20 w-auto" data-testid="img-logo" />
             </div>
             <p className="text-2xl font-semibold text-orange-100">
               Construction Site Daily Reporting Made Simple
@@ -196,9 +196,8 @@ export default function Homepage() {
       <footer className="border-t py-8 mt-16">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Building2 className="h-5 w-5" />
-              <span className="font-semibold">TradeaseAI</span>
+            <div className="flex items-center gap-2">
+              <img src={logoUrl} alt="TradeaseAI" className="h-8 w-auto" />
             </div>
             <p className="text-sm text-muted-foreground">
               Construction Site Daily Reporting System
