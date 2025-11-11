@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
+import Homepage from "@/pages/Homepage";
 import AdminLogin from "@/components/admin/AdminLogin";
 import AdminLayout from "@/components/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
@@ -177,9 +178,7 @@ function App() {
           <Route path="/admin">
             {() => <ProtectedRoute component={Clients} />}
           </Route>
-          <Route path="/">
-            <Redirect to="/admin" />
-          </Route>
+          <Route path="/" component={Homepage} />
           <Route component={NotFound} />
         </Switch>
       </TooltipProvider>
