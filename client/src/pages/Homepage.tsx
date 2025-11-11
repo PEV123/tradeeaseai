@@ -168,7 +168,7 @@ export default function Homepage() {
               { icon: Brain, title: "GPT-5 Analysis", desc: "Advanced AI analyzes form data and site photos to generate comprehensive reports" },
               { icon: Zap, title: "Automated PDFs", desc: "Beautiful, branded PDF reports with embedded images created automatically" },
               { icon: Mail, title: "Email Notifications", desc: "Automatically send completed reports to all stakeholders via SMTP" },
-              { icon: Users, title: "Client Portal", desc: "Secure portal where clients can view and download all their historical reports" },
+              { icon: Users, title: "Client Portal", desc: "View reports and collate finances for jobs inside our dedicated client portal" },
             ].map((feature, i) => (
               <div key={i} className="flex gap-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm hover-elevate">
                 <div className="flex-shrink-0">
