@@ -62,6 +62,18 @@ export const workers = pgTable("workers", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const clientUsers = pgTable("client_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  lastLogin: timestamp("last_login"),
+  resetToken: text("reset_token"),
+  resetTokenExpiry: timestamp("reset_token_expiry"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 // Admin Schema
 export const adminSchema = z.object({
   id: z.string(),
@@ -211,11 +223,47 @@ export const insertWorkerSchema = z.object({
 export type Worker = z.infer<typeof workerSchema>;
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
 
+// Client User Schema
+export const clientUserSchema = z.object({
+  id: z.string(),
+  clientId: z.string(),
+  email: z.string().email(),
+  passwordHash: z.string(),
+  lastLogin: z.date().nullable(),
+  resetToken: z.string().nullable(),
+  resetTokenExpiry: z.date().nullable(),
+  active: z.boolean(),
+  createdAt: z.date(),
+});
+
+export const insertClientUserSchema = z.object({
+  clientId: z.string(),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
+
+export const clientLoginSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type ClientUser = z.infer<typeof clientUserSchema>;
+export type InsertClientUser = z.infer<typeof insertClientUserSchema>;
+export type ClientLoginCredentials = z.infer<typeof clientLoginSchema>;
+
 // API Response Types
 export type AuthResponse = {
   success: boolean;
   token?: string;
   admin?: Omit<Admin, 'passwordHash'>;
+  error?: string;
+};
+
+export type ClientAuthResponse = {
+  success: boolean;
+  token?: string;
+  client?: Client;
+  clientUser?: Omit<ClientUser, 'passwordHash'>;
   error?: string;
 };
 
