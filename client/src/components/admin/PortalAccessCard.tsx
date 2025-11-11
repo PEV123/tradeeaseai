@@ -19,10 +19,20 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  const { data: portalUser, isLoading } = useQuery({
+  const { data: client, isLoading: clientLoading } = useQuery({
+    queryKey: [`/api/admin/clients/${clientId}`],
+    queryFn: async () => {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/admin/clients/${clientId}`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to fetch client");
+      return response.json();
+    },
+  });
+
+  const { data: portalUser, isLoading: portalUserLoading } = useQuery({
     queryKey: [`/api/admin/clients/${clientId}/portal-user`],
     queryFn: async () => {
       const token = localStorage.getItem("admin_token");
@@ -35,7 +45,12 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: { email: string; password: string }) => {
+    mutationFn: async () => {
+      const contactEmail = client?.contactEmail;
+      if (!contactEmail) {
+        throw new Error("Contact email not found");
+      }
+      
       const token = localStorage.getItem("admin_token");
       const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
         method: "POST",
@@ -43,7 +58,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ email: contactEmail, password: contactEmail }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -53,10 +68,11 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
-      toast({ title: "Success", description: "Portal access created successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Portal access created. Username and password are both set to the contact email." 
+      });
       setIsCreating(false);
-      setEmail("");
-      setPassword("");
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -64,7 +80,12 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async (data: { password: string }) => {
+    mutationFn: async () => {
+      const contactEmail = client?.contactEmail;
+      if (!contactEmail) {
+        throw new Error("Contact email not found");
+      }
+      
       const token = localStorage.getItem("admin_token");
       const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
         method: "PUT",
@@ -72,7 +93,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ password: contactEmail }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -82,9 +103,11 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
-      toast({ title: "Success", description: "Password reset successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Password reset to contact email successfully" 
+      });
       setIsResetting(false);
-      setPassword("");
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
@@ -111,22 +134,22 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   });
 
   const handleCreate = () => {
-    if (!email || !password) {
-      toast({ variant: "destructive", title: "Error", description: "Email and password are required" });
+    if (!client?.contactEmail) {
+      toast({ variant: "destructive", title: "Error", description: "Contact email not found" });
       return;
     }
-    createMutation.mutate({ email, password });
+    createMutation.mutate();
   };
 
   const handleReset = () => {
-    if (!password) {
-      toast({ variant: "destructive", title: "Error", description: "Password is required" });
+    if (!client?.contactEmail) {
+      toast({ variant: "destructive", title: "Error", description: "Contact email not found" });
       return;
     }
-    updateMutation.mutate({ password });
+    updateMutation.mutate();
   };
 
-  if (isLoading) {
+  if (clientLoading || portalUserLoading) {
     return (
       <Card>
         <CardHeader>
@@ -152,7 +175,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           Client Portal Access
         </CardTitle>
         <CardDescription>
-          Manage client login credentials for viewing reports
+          Username and password are automatically set to the contact email
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -187,17 +210,9 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
 
             {isResetting ? (
               <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter new password"
-                    data-testid="input-reset-password"
-                  />
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  This will reset the password to match the current contact email: <strong>{client?.contactEmail}</strong>
+                </p>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleReset}
@@ -208,10 +223,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setIsResetting(false);
-                      setPassword("");
-                    }}
+                    onClick={() => setIsResetting(false)}
                     disabled={updateMutation.isPending}
                     data-testid="button-cancel-reset"
                   >
@@ -263,27 +275,12 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           <>
             {isCreating ? (
               <div className="space-y-4 p-4 border rounded-md bg-muted/50">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="client@example.com"
-                    data-testid="input-create-email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    data-testid="input-create-password"
-                  />
+                <p className="text-sm text-muted-foreground">
+                  Portal access will be created with the following credentials:
+                </p>
+                <div className="p-3 bg-background rounded-md border">
+                  <p className="text-sm"><strong>Username:</strong> {client?.contactEmail}</p>
+                  <p className="text-sm"><strong>Password:</strong> {client?.contactEmail}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -295,11 +292,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setIsCreating(false);
-                      setEmail("");
-                      setPassword("");
-                    }}
+                    onClick={() => setIsCreating(false)}
                     disabled={createMutation.isPending}
                     data-testid="button-cancel-create"
                   >
@@ -309,8 +302,11 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
               </div>
             ) : (
               <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground mb-2">
+                  No portal access configured.
+                </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  No portal access configured. Create login credentials to allow this client to view their reports online.
+                  Username and password will be set to: <strong>{client?.contactEmail}</strong>
                 </p>
                 <Button onClick={() => setIsCreating(true)} data-testid="button-enable-portal">
                   <Shield className="h-4 w-4 mr-2" />
