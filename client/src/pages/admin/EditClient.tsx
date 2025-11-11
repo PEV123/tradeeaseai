@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { type Client, type InsertClient } from "@shared/schema";
 import ClientForm from "@/components/admin/ClientForm";
+import PortalAccessCard from "@/components/admin/PortalAccessCard";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -94,12 +95,19 @@ export default function EditClient() {
         </div>
       </div>
 
-      <ClientForm
-        client={client}
-        onSubmit={handleSubmit}
-        onCancel={() => setLocation("/admin/clients")}
-        isLoading={updateMutation.isPending}
-      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div>
+          <ClientForm
+            client={client}
+            onSubmit={handleSubmit}
+            onCancel={() => setLocation("/admin/clients")}
+            isLoading={updateMutation.isPending}
+          />
+        </div>
+        <div>
+          <PortalAccessCard clientId={params?.id || ""} />
+        </div>
+      </div>
     </div>
   );
 }

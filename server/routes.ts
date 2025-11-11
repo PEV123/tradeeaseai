@@ -37,23 +37,32 @@ function requireAuth(req: Request, res: Response, next: Function) {
   next();
 }
 
-// Middleware to verify client token
+// Middleware to verify client token from cookie
 async function requireClientAuth(req: Request, res: Response, next: Function) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.replace("Bearer ", "");
+  const token = req.cookies?.client_token;
 
   if (!token) {
-    return res.status(401).json({ error: "No token provided" });
+    return res.status(401).json({ error: "Not authenticated" });
   }
 
   const decoded = verifyToken(token);
   if (!decoded || decoded.tokenType !== "client" || !decoded.clientUserId || !decoded.clientId) {
+    res.clearCookie('client_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     return res.status(401).json({ error: "Invalid client token" });
   }
 
   // Verify client user exists and is active
   const clientUser = await storage.getClientUser(decoded.clientUserId);
   if (!clientUser || !clientUser.active) {
+    res.clearCookie('client_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
     return res.status(401).json({ error: "Account is inactive" });
   }
 
@@ -286,9 +295,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const token = generateClientToken(clientUser.id, clientUser.clientId);
 
+      // Set secure HTTP-only cookie
+      res.cookie('client_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
       res.json({
         success: true,
-        token,
         client,
         clientUser: {
           id: clientUser.id,
@@ -311,11 +327,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientUser = await storage.getClientUser(clientUserId);
       
       if (!clientUser) {
+        res.clearCookie('client_token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+        });
         return res.status(404).json({ error: "Client user not found" });
       }
 
       const client = await storage.getClient(clientUser.clientId);
       if (!client) {
+        res.clearCookie('client_token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+        });
         return res.status(404).json({ error: "Client not found" });
       }
 
@@ -330,6 +356,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         client,
       });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Client logout
+  app.post("/api/client/auth/logout", (req: Request, res: Response) => {
+    res.clearCookie('client_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+    res.json({ success: true });
+  });
+
+  // ========== CLIENT PORTAL ROUTES ==========
+
+  // Get all reports for authenticated client
+  app.get("/api/client/reports", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).clientId;
+      const reports = await storage.getReportsByClient(clientId);
+      res.json(reports);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get specific report for authenticated client
+  app.get("/api/client/reports/:id", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).clientId;
+      const report = await storage.getReport(req.params.id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      // Verify report belongs to authenticated client
+      if (report.clientId !== clientId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json(report);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get report images for authenticated client
+  app.get("/api/client/reports/:id/images", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).clientId;
+      const report = await storage.getReport(req.params.id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      // Verify report belongs to authenticated client
+      if (report.clientId !== clientId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const images = await storage.getImagesByReport(req.params.id);
+      res.json(images);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get report workers for authenticated client
+  app.get("/api/client/reports/:id/workers", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).clientId;
+      const report = await storage.getReport(req.params.id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      // Verify report belongs to authenticated client
+      if (report.clientId !== clientId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const workers = await storage.getWorkersByReport(req.params.id);
+      res.json(workers);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Download PDF for authenticated client
+  app.get("/api/client/reports/:id/pdf", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientId = (req as any).clientId;
+      const report = await storage.getReport(req.params.id);
+      
+      if (!report) {
+        return res.status(404).json({ error: "Report not found" });
+      }
+
+      // Verify report belongs to authenticated client
+      if (report.clientId !== clientId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (!report.pdfPath) {
+        return res.status(404).json({ error: "PDF not yet generated" });
+      }
+
+      const pdfFilePath = path.join(process.cwd(), report.pdfPath);
+      
+      try {
+        await fs.access(pdfFilePath);
+        res.download(pdfFilePath, `report-${report.id}.pdf`);
+      } catch {
+        return res.status(404).json({ error: "PDF file not found" });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -498,6 +644,134 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updated);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Get client portal user
+  app.get("/api/admin/clients/:id/portal-user", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const clientUsers = await storage.getClientUsersByClient(req.params.id);
+      if (clientUsers.length > 0) {
+        res.json({
+          exists: true,
+          user: {
+            id: clientUsers[0].id,
+            email: clientUsers[0].email,
+            active: clientUsers[0].active,
+            createdAt: clientUsers[0].createdAt,
+            lastLogin: clientUsers[0].lastLogin,
+          },
+        });
+      } else {
+        res.json({ exists: false });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Create client portal user
+  app.post("/api/admin/clients/:id/portal-user", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required" });
+      }
+
+      // Check if user already exists for this client
+      const existing = await storage.getClientUsersByClient(req.params.id);
+      if (existing.length > 0) {
+        return res.status(400).json({ error: "Portal user already exists for this client" });
+      }
+
+      // Check if email is already in use
+      const existingEmail = await storage.getClientUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ error: "Email already in use" });
+      }
+
+      const passwordHash = await hashPassword(password);
+      const clientUser = await storage.createClientUser({
+        clientId: req.params.id,
+        email,
+        passwordHash,
+        active: true,
+      });
+
+      res.json({
+        success: true,
+        user: {
+          id: clientUser.id,
+          email: clientUser.email,
+          active: clientUser.active,
+          createdAt: clientUser.createdAt,
+        },
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Update client portal user (reset password or toggle active)
+  app.put("/api/admin/clients/:id/portal-user", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { email, password, active } = req.body;
+
+      const clientUsers = await storage.getClientUsersByClient(req.params.id);
+      if (clientUsers.length === 0) {
+        return res.status(404).json({ error: "Portal user not found" });
+      }
+
+      const clientUser = clientUsers[0];
+      const updates: any = {};
+
+      if (email && email !== clientUser.email) {
+        // Check if new email is already in use
+        const existingEmail = await storage.getClientUserByEmail(email);
+        if (existingEmail && existingEmail.id !== clientUser.id) {
+          return res.status(400).json({ error: "Email already in use" });
+        }
+        updates.email = email;
+      }
+
+      if (password) {
+        updates.passwordHash = await hashPassword(password);
+      }
+
+      if (active !== undefined) {
+        updates.active = active;
+      }
+
+      const updated = await storage.updateClientUser(clientUser.id, updates);
+
+      res.json({
+        success: true,
+        user: {
+          id: updated.id,
+          email: updated.email,
+          active: updated.active,
+          createdAt: updated.createdAt,
+          lastLogin: updated.lastLogin,
+        },
+      });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete client portal user
+  app.delete("/api/admin/clients/:id/portal-user", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const clientUsers = await storage.getClientUsersByClient(req.params.id);
+      if (clientUsers.length === 0) {
+        return res.status(404).json({ error: "Portal user not found" });
+      }
+
+      await storage.deleteClientUser(clientUsers[0].id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

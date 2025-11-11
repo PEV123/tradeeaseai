@@ -1,0 +1,326 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Shield, Key, Mail, Trash2, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+
+interface PortalAccessCardProps {
+  clientId: string;
+}
+
+export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [isCreating, setIsCreating] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { data: portalUser, isLoading } = useQuery({
+    queryKey: [`/api/admin/clients/${clientId}/portal-user`],
+    queryFn: async () => {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to fetch portal user");
+      return response.json();
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { email: string; password: string }) => {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create portal user");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
+      toast({ title: "Success", description: "Portal access created successfully" });
+      setIsCreating(false);
+      setEmail("");
+      setPassword("");
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: { password: string }) => {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to reset password");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
+      toast({ title: "Success", description: "Password reset successfully" });
+      setIsResetting(false);
+      setPassword("");
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const token = localStorage.getItem("admin_token");
+      const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to delete portal user");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
+      toast({ title: "Success", description: "Portal access removed successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    },
+  });
+
+  const handleCreate = () => {
+    if (!email || !password) {
+      toast({ variant: "destructive", title: "Error", description: "Email and password are required" });
+      return;
+    }
+    createMutation.mutate({ email, password });
+  };
+
+  const handleReset = () => {
+    if (!password) {
+      toast({ variant: "destructive", title: "Error", description: "Password is required" });
+      return;
+    }
+    updateMutation.mutate({ password });
+  };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Client Portal Access
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card data-testid="card-portal-access">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Shield className="h-5 w-5" />
+          Client Portal Access
+        </CardTitle>
+        <CardDescription>
+          Manage client login credentials for viewing reports
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {portalUser?.exists ? (
+          <>
+            <div className="flex items-center justify-between p-4 border rounded-md">
+              <div className="flex items-center gap-4">
+                <Mail className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium" data-testid="text-portal-email">{portalUser.user.email}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {portalUser.user.lastLogin 
+                      ? `Last login: ${format(new Date(portalUser.user.lastLogin), "PPp")}`
+                      : "Never logged in"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {portalUser.user.active ? (
+                  <Badge variant="default" data-testid="badge-active">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" data-testid="badge-inactive">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Inactive
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {isResetting ? (
+              <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                <div className="space-y-2">
+                  <Label htmlFor="new-password">New Password</Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    data-testid="input-reset-password"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleReset}
+                    disabled={updateMutation.isPending}
+                    data-testid="button-confirm-reset"
+                  >
+                    {updateMutation.isPending ? "Resetting..." : "Confirm Reset"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsResetting(false);
+                      setPassword("");
+                    }}
+                    disabled={updateMutation.isPending}
+                    data-testid="button-cancel-reset"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsResetting(true)}
+                  data-testid="button-reset-password"
+                >
+                  <Key className="h-4 w-4 mr-2" />
+                  Reset Password
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" data-testid="button-delete-portal-access">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Access
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove Portal Access?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete the client's portal login credentials.
+                        They will no longer be able to access their reports online.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteMutation.mutate()}
+                        className="bg-destructive hover:bg-destructive/90"
+                        data-testid="button-confirm-delete"
+                      >
+                        {deleteMutation.isPending ? "Removing..." : "Remove Access"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {isCreating ? (
+              <div className="space-y-4 p-4 border rounded-md bg-muted/50">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="client@example.com"
+                    data-testid="input-create-email"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    data-testid="input-create-password"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleCreate}
+                    disabled={createMutation.isPending}
+                    data-testid="button-confirm-create"
+                  >
+                    {createMutation.isPending ? "Creating..." : "Create Access"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsCreating(false);
+                      setEmail("");
+                      setPassword("");
+                    }}
+                    disabled={createMutation.isPending}
+                    data-testid="button-cancel-create"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground mb-4">
+                  No portal access configured. Create login credentials to allow this client to view their reports online.
+                </p>
+                <Button onClick={() => setIsCreating(true)} data-testid="button-enable-portal">
+                  <Shield className="h-4 w-4 mr-2" />
+                  Enable Portal Access
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
