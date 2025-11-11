@@ -53,10 +53,10 @@ export default function Homepage() {
               data-testid="img-logo-hero" 
             />
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-              Transform Your Construction Reporting
+              Daily Work Tracking for Construction Managers
             </h1>
             <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              AI-powered daily site reports that save time, improve accuracy, and keep stakeholders informed—automatically.
+              Log your daily construction activities and get professional PDF reports instantly. At job completion, receive a comprehensive spreadsheet with all project details.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link href="/admin">
@@ -95,21 +95,21 @@ export default function Homepage() {
       <div className="py-24 bg-background">
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Why Choose TradeaseAI?</h2>
-            <p className="text-xl text-muted-foreground">Everything you need for professional construction documentation</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Built for Construction Managers</h2>
+            <p className="text-xl text-muted-foreground">Track daily work, manage your projects, and get comprehensive financial summaries</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
             <Card className="border-0 shadow-lg hover-elevate">
               <CardHeader className="space-y-4">
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                  <Zap className="h-8 w-8 text-white" />
+                  <FileText className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Save 80% of Time</CardTitle>
+                <CardTitle className="text-2xl">Daily Work Logging</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base">
-                  Automated AI analysis and PDF generation means reports that used to take hours now take minutes.
+                  Quickly log each day's activities, workforce, materials used, and site photos in one simple form.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -119,11 +119,11 @@ export default function Homepage() {
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                   <Brain className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl">AI-Powered Insights</CardTitle>
+                <CardTitle className="text-2xl">Instant PDF Reports</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base">
-                  GPT-5 analyzes photos and data to extract workforce details, materials, and safety observations automatically.
+                  AI analyzes your entries and generates professional PDF reports automatically for daily documentation.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -133,11 +133,11 @@ export default function Homepage() {
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
                   <Shield className="h-8 w-8 text-white" />
                 </div>
-                <CardTitle className="text-2xl">Secure & Professional</CardTitle>
+                <CardTitle className="text-2xl">End-of-Job Spreadsheet</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base">
-                  Client-branded PDFs, secure portal access, and automated email delivery to keep everyone informed.
+                  When your project is complete, get a comprehensive spreadsheet with all work details and financial data.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -158,17 +158,17 @@ export default function Homepage() {
         
         <div className="relative z-10 container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-16 text-white">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Complete Feature Set</h2>
-            <p className="text-xl text-white/90">Built for modern construction companies</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Everything You Need</h2>
+            <p className="text-xl text-white/90">Simple daily logging to comprehensive project summaries</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
             {[
-              { icon: FileText, title: "Custom Branded Forms", desc: "No-login forms with your company logo and colors that workers access via simple URL" },
-              { icon: Brain, title: "GPT-5 Analysis", desc: "Advanced AI analyzes form data and site photos to generate comprehensive reports" },
-              { icon: Zap, title: "Automated PDFs", desc: "Beautiful, branded PDF reports with embedded images created automatically" },
-              { icon: Mail, title: "Email Notifications", desc: "Automatically send completed reports to all stakeholders via SMTP" },
-              { icon: Users, title: "Client Portal", desc: "View reports and collate finances for jobs inside our dedicated client portal" },
+              { icon: FileText, title: "Easy Daily Forms", desc: "Quick and simple forms to log workforce, hours worked, materials used, and progress photos each day" },
+              { icon: Brain, title: "AI-Generated Reports", desc: "Your daily entries are automatically transformed into professional PDF reports with AI analysis" },
+              { icon: Zap, title: "Organized Data Storage", desc: "All your daily logs are saved and organized chronologically for easy reference and tracking" },
+              { icon: Mail, title: "Email Distribution", desc: "Daily PDF reports automatically sent to project stakeholders to keep everyone informed" },
+              { icon: Users, title: "Client Portal Access", desc: "View all your reports and collate financial data for each job in our dedicated portal" },
             ].map((feature, i) => (
               <div key={i} className="flex gap-4 p-6 rounded-xl bg-white/10 backdrop-blur-sm hover-elevate">
                 <div className="flex-shrink-0">
@@ -191,15 +191,15 @@ export default function Homepage() {
         <div className="container mx-auto px-6 max-w-6xl">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-muted-foreground">Simple workflow, powerful results</p>
+            <p className="text-xl text-muted-foreground">From daily logging to complete project summaries</p>
           </div>
 
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { num: "1", title: "Submit Report", desc: "Workers fill out branded forms with photos from any device" },
-              { num: "2", title: "AI Analysis", desc: "GPT-5 analyzes data and images in seconds" },
-              { num: "3", title: "Generate PDF", desc: "Professional branded reports created automatically" },
-              { num: "4", title: "Distribute", desc: "Email to stakeholders and available in client portal" },
+              { num: "1", title: "Log Your Day", desc: "Enter work details, labor hours, materials, and upload site photos" },
+              { num: "2", title: "Get PDF Report", desc: "AI generates a professional daily report automatically" },
+              { num: "3", title: "Track Progress", desc: "All daily reports saved and organized in your portal" },
+              { num: "4", title: "Export Spreadsheet", desc: "At job completion, download a comprehensive data spreadsheet" },
             ].map((step) => (
               <div key={step.num} className="text-center space-y-4">
                 <div className="relative mx-auto w-20 h-20">
@@ -229,10 +229,10 @@ export default function Homepage() {
         
         <div className="relative z-10 container mx-auto px-6 max-w-4xl text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            Ready to Transform Your Reporting?
+            Start Tracking Your Projects Today
           </h2>
           <p className="text-xl text-white/80 mb-8">
-            Join construction companies saving hours every day with AI-powered reporting
+            Log daily work, get instant reports, and export comprehensive project data when the job is done
           </p>
           <Link href="/admin">
             <Button 
