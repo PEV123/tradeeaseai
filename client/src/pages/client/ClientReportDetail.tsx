@@ -155,36 +155,29 @@ export default function ClientReportDetail() {
           </Badge>
         </div>
 
-        {/* Metadata */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Report Metadata</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Report Date</p>
-                <p className="font-medium" data-testid="text-report-date">
+        {/* Metadata Table */}
+        <div className="mb-6 border rounded-lg overflow-hidden">
+          <table className="w-full">
+            <tbody className="divide-y">
+              <tr className="hover-elevate">
+                <td className="px-4 py-2 text-sm font-medium text-muted-foreground w-32">Report Date</td>
+                <td className="px-4 py-2 text-sm" data-testid="text-report-date">
                   {format(new Date(report.reportDate), "MMM dd, yyyy")}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Submitted</p>
-                <p className="font-medium" data-testid="text-submitted-date">
+                </td>
+                <td className="px-4 py-2 text-sm font-medium text-muted-foreground w-32">Submitted</td>
+                <td className="px-4 py-2 text-sm" data-testid="text-submitted-date">
                   {report.submittedAt ? format(new Date(report.submittedAt), "MMM dd, yyyy HH:mm") : "N/A"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Images</p>
-                <p className="font-medium" data-testid="text-image-count">{images?.length || 0}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Report ID</p>
-                <p className="font-mono text-sm" data-testid="text-report-id">{report.id.slice(0, 8)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                </td>
+              </tr>
+              <tr className="hover-elevate">
+                <td className="px-4 py-2 text-sm font-medium text-muted-foreground">Images</td>
+                <td className="px-4 py-2 text-sm" data-testid="text-image-count">{images?.length || 0}</td>
+                <td className="px-4 py-2 text-sm font-medium text-muted-foreground">Report ID</td>
+                <td className="px-4 py-2 text-sm font-mono" data-testid="text-report-id">{report.id.slice(0, 8)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {/* Form Data */}
         {formData && (
