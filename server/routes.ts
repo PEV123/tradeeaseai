@@ -478,31 +478,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientId = (req as any).clientId;
       const report = await storage.getReport(req.params.id);
       
+      console.log('[PDF Download] Request for report:', req.params.id);
+      
       if (!report) {
+        console.log('[PDF Download] Report not found');
         return res.status(404).json({ error: "Report not found" });
       }
 
       // Verify report belongs to authenticated client
       if (report.clientId !== clientId) {
+        console.log('[PDF Download] Access denied - wrong client');
         return res.status(403).json({ error: "Access denied" });
       }
 
       if (!report.pdfPath) {
+        console.log('[PDF Download] PDF path not set in database');
         return res.status(404).json({ error: "PDF not yet generated" });
       }
+
+      console.log('[PDF Download] PDF path from DB:', report.pdfPath);
+      console.log('[PDF Download] Is absolute:', path.isAbsolute(report.pdfPath));
+      console.log('[PDF Download] process.cwd():', process.cwd());
 
       // Use pdfPath as-is if it's absolute, otherwise join with cwd
       const pdfFilePath = path.isAbsolute(report.pdfPath) 
         ? report.pdfPath 
         : path.join(process.cwd(), report.pdfPath);
       
+      console.log('[PDF Download] Final file path:', pdfFilePath);
+      
       try {
         await fs.access(pdfFilePath);
+        console.log('[PDF Download] File exists, sending download...');
         res.download(pdfFilePath, `report-${report.id}.pdf`);
-      } catch {
+      } catch (error) {
+        console.log('[PDF Download] File not accessible:', error);
         return res.status(404).json({ error: "PDF file not found" });
       }
     } catch (error: any) {
+      console.log('[PDF Download] Error:', error);
       res.status(500).json({ error: error.message });
     }
   });
