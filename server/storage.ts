@@ -1,4 +1,4 @@
-import { type Admin, type Client, type Report, type Image, type Settings, type Worker, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images, settings, workers } from "@shared/schema";
+import { type Admin, type Client, type Report, type Image, type Settings, type Worker, type ClientUser, type ClientWithReportCount, type ReportWithClient, admins, clients, reports, images, settings, workers, clientUsers } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -42,6 +42,14 @@ export interface IStorage {
   createWorker(worker: Omit<Worker, 'id' | 'createdAt'>): Promise<Worker>;
   deleteWorkersByReport(reportId: string): Promise<void>;
 
+  // Client Users
+  getClientUser(id: string): Promise<ClientUser | undefined>;
+  getClientUserByEmail(email: string): Promise<ClientUser | undefined>;
+  getClientUserByClientId(clientId: string): Promise<ClientUser | undefined>;
+  createClientUser(clientUser: Omit<ClientUser, 'id' | 'lastLogin' | 'resetToken' | 'resetTokenExpiry' | 'createdAt'>): Promise<ClientUser>;
+  updateClientUser(id: string, clientUser: Partial<Omit<ClientUser, 'id' | 'clientId' | 'createdAt'>>): Promise<ClientUser | undefined>;
+  deleteClientUserByClientId(clientId: string): Promise<boolean>;
+
   // Stats
   getStats(): Promise<{
     totalClients: number;
@@ -57,6 +65,7 @@ export class MemStorage implements IStorage {
   private reports: Map<string, Report>;
   private images: Map<string, Image>;
   private workers: Map<string, Worker>;
+  private clientUsers: Map<string, ClientUser>;
 
   constructor() {
     this.admins = new Map();
@@ -64,6 +73,7 @@ export class MemStorage implements IStorage {
     this.reports = new Map();
     this.images = new Map();
     this.workers = new Map();
+    this.clientUsers = new Map();
   }
 
   // Admin methods
@@ -332,6 +342,55 @@ export class MemStorage implements IStorage {
         this.workers.delete(id);
       }
     }
+  }
+
+  // Client User methods
+  async getClientUser(id: string): Promise<ClientUser | undefined> {
+    return this.clientUsers.get(id);
+  }
+
+  async getClientUserByEmail(email: string): Promise<ClientUser | undefined> {
+    return Array.from(this.clientUsers.values()).find(
+      (user) => user.email === email
+    );
+  }
+
+  async getClientUserByClientId(clientId: string): Promise<ClientUser | undefined> {
+    return Array.from(this.clientUsers.values()).find(
+      (user) => user.clientId === clientId
+    );
+  }
+
+  async createClientUser(clientUserData: Omit<ClientUser, 'id' | 'lastLogin' | 'resetToken' | 'resetTokenExpiry' | 'createdAt'>): Promise<ClientUser> {
+    const id = randomUUID();
+    const clientUser: ClientUser = {
+      ...clientUserData,
+      id,
+      lastLogin: null,
+      resetToken: null,
+      resetTokenExpiry: null,
+      createdAt: new Date(),
+    };
+    this.clientUsers.set(id, clientUser);
+    return clientUser;
+  }
+
+  async updateClientUser(id: string, clientUserData: Partial<Omit<ClientUser, 'id' | 'clientId' | 'createdAt'>>): Promise<ClientUser | undefined> {
+    const existing = this.clientUsers.get(id);
+    if (!existing) return undefined;
+
+    const updated: ClientUser = {
+      ...existing,
+      ...clientUserData,
+    };
+    this.clientUsers.set(id, updated);
+    return updated;
+  }
+
+  async deleteClientUserByClientId(clientId: string): Promise<boolean> {
+    const user = Array.from(this.clientUsers.values()).find(u => u.clientId === clientId);
+    if (!user) return false;
+    return this.clientUsers.delete(user.id);
   }
 
   // Stats methods
@@ -652,6 +711,47 @@ export class DbStorage implements IStorage {
     await this.db
       .delete(workers)
       .where(eq(workers.reportId, reportId));
+  }
+
+  // Client User methods
+  async getClientUser(id: string): Promise<ClientUser | undefined> {
+    const result = await this.db.select().from(clientUsers).where(eq(clientUsers.id, id));
+    return result[0];
+  }
+
+  async getClientUserByEmail(email: string): Promise<ClientUser | undefined> {
+    const result = await this.db.select().from(clientUsers).where(eq(clientUsers.email, email));
+    return result[0];
+  }
+
+  async getClientUserByClientId(clientId: string): Promise<ClientUser | undefined> {
+    const result = await this.db.select().from(clientUsers).where(eq(clientUsers.clientId, clientId));
+    return result[0];
+  }
+
+  async createClientUser(clientUserData: Omit<ClientUser, 'id' | 'lastLogin' | 'resetToken' | 'resetTokenExpiry' | 'createdAt'>): Promise<ClientUser> {
+    const result = await this.db
+      .insert(clientUsers)
+      .values(clientUserData)
+      .returning();
+    return result[0];
+  }
+
+  async updateClientUser(id: string, clientUserData: Partial<Omit<ClientUser, 'id' | 'clientId' | 'createdAt'>>): Promise<ClientUser | undefined> {
+    const result = await this.db
+      .update(clientUsers)
+      .set(clientUserData)
+      .where(eq(clientUsers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteClientUserByClientId(clientId: string): Promise<boolean> {
+    const result = await this.db
+      .delete(clientUsers)
+      .where(eq(clientUsers.clientId, clientId))
+      .returning();
+    return result.length > 0;
   }
 
   // Stats methods
