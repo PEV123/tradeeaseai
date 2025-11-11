@@ -47,9 +47,11 @@ async function requireClientAuth(req: Request, res: Response, next: Function) {
 
   const decoded = verifyToken(token);
   if (!decoded || decoded.tokenType !== "client" || !decoded.clientUserId || !decoded.clientId) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
     res.clearCookie('client_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction && isHttps,
       sameSite: 'lax',
     });
     return res.status(401).json({ error: "Invalid client token" });
@@ -58,9 +60,11 @@ async function requireClientAuth(req: Request, res: Response, next: Function) {
   // Verify client user exists and is active
   const clientUser = await storage.getClientUser(decoded.clientUserId);
   if (!clientUser || !clientUser.active) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
     res.clearCookie('client_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction && isHttps,
       sameSite: 'lax',
     });
     return res.status(401).json({ error: "Account is inactive" });
@@ -296,9 +300,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const token = generateClientToken(clientUser.id, clientUser.clientId);
 
       // Set secure HTTP-only cookie
+      // Only use secure flag if explicitly in production AND over HTTPS
+      const isProduction = process.env.NODE_ENV === 'production';
+      const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
+      
+      console.log('[Client Login] Cookie settings:', {
+        NODE_ENV: process.env.NODE_ENV,
+        isProduction,
+        protocol: req.protocol,
+        xForwardedProto: req.get('x-forwarded-proto'),
+        isHttps,
+        secureFlag: isProduction && isHttps,
+      });
+      
       res.cookie('client_token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: isProduction && isHttps,
         sameSite: 'lax',
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       });
@@ -327,9 +344,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientUser = await storage.getClientUser(clientUserId);
       
       if (!clientUser) {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
         res.clearCookie('client_token', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: isProduction && isHttps,
           sameSite: 'lax',
         });
         return res.status(404).json({ error: "Client user not found" });
@@ -337,9 +356,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const client = await storage.getClient(clientUser.clientId);
       if (!client) {
+        const isProduction = process.env.NODE_ENV === 'production';
+        const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
         res.clearCookie('client_token', {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: isProduction && isHttps,
           sameSite: 'lax',
         });
         return res.status(404).json({ error: "Client not found" });
@@ -363,9 +384,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client logout
   app.post("/api/client/auth/logout", (req: Request, res: Response) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isHttps = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
     res.clearCookie('client_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isProduction && isHttps,
       sameSite: 'lax',
     });
     res.json({ success: true });

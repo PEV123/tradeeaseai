@@ -46,6 +46,7 @@ export interface IStorage {
   getClientUser(id: string): Promise<ClientUser | undefined>;
   getClientUserByEmail(email: string): Promise<ClientUser | undefined>;
   getClientUserByClientId(clientId: string): Promise<ClientUser | undefined>;
+  getClientUsersByClient(clientId: string): Promise<ClientUser[]>;
   createClientUser(clientUser: Omit<ClientUser, 'id' | 'lastLogin' | 'resetToken' | 'resetTokenExpiry' | 'createdAt'>): Promise<ClientUser>;
   updateClientUser(id: string, clientUser: Partial<Omit<ClientUser, 'id' | 'clientId' | 'createdAt'>>): Promise<ClientUser | undefined>;
   deleteClientUserByClientId(clientId: string): Promise<boolean>;
@@ -357,6 +358,12 @@ export class MemStorage implements IStorage {
 
   async getClientUserByClientId(clientId: string): Promise<ClientUser | undefined> {
     return Array.from(this.clientUsers.values()).find(
+      (user) => user.clientId === clientId
+    );
+  }
+
+  async getClientUsersByClient(clientId: string): Promise<ClientUser[]> {
+    return Array.from(this.clientUsers.values()).filter(
       (user) => user.clientId === clientId
     );
   }
@@ -727,6 +734,11 @@ export class DbStorage implements IStorage {
   async getClientUserByClientId(clientId: string): Promise<ClientUser | undefined> {
     const result = await this.db.select().from(clientUsers).where(eq(clientUsers.clientId, clientId));
     return result[0];
+  }
+
+  async getClientUsersByClient(clientId: string): Promise<ClientUser[]> {
+    const result = await this.db.select().from(clientUsers).where(eq(clientUsers.clientId, clientId));
+    return result;
   }
 
   async createClientUser(clientUserData: Omit<ClientUser, 'id' | 'lastLogin' | 'resetToken' | 'resetTokenExpiry' | 'createdAt'>): Promise<ClientUser> {
