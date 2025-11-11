@@ -183,10 +183,10 @@ export default function ClientPortal({ clientId, client, onLogout }: ClientPorta
                         <div className="flex items-center gap-4 text-sm">
                           <span className="flex items-center gap-1" data-testid={`text-report-date-${report.id}`}>
                             <Calendar className="h-4 w-4" />
-                            {format(new Date(report.reportDate), "PPP")}
+                            {report.reportDate ? format(new Date(report.reportDate), "PPP") : "N/A"}
                           </span>
                           <span className="text-muted-foreground" data-testid={`text-submitted-${report.id}`}>
-                            Submitted {format(new Date(report.createdAt), "PPP")}
+                            Submitted {report.createdAt ? format(new Date(report.createdAt), "PPP") : "N/A"}
                           </span>
                         </div>
                       </CardDescription>
