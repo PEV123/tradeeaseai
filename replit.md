@@ -6,6 +6,7 @@ TradeaseAI is a construction site daily reporting system that enables constructi
 
 - **Admin Dashboard**: Manage multiple construction company clients, each with custom branding
 - **Public Report Forms**: Custom-branded, no-login forms for site workers to submit daily reports
+- **Client Portal**: Secure authentication system allowing clients to view their historical reports
 - **AI-Powered Analysis**: GPT-5 integration to analyze form data and site photos
 - **Automated PDF Generation**: Creates professional PDF reports with embedded images
 - **Email Notifications**: Sends completed reports to designated stakeholders
@@ -36,6 +37,7 @@ Preferred communication style: Simple, everyday language.
 **Routing**: Wouter for lightweight client-side routing
 - Public routes: `/form/:slug` for custom-branded report submission forms
 - Admin routes: `/admin/*` with subroutes for dashboard, clients, reports, and settings
+- Client portal routes: `/client/login`, `/client/portal`, `/client/reports/:id`
 - Not Found fallback for unmatched routes
 
 **Form Handling**: React Hook Form with Zod schema validation
@@ -58,11 +60,20 @@ Preferred communication style: Simple, everyday language.
 - Data models: Admin, Client, Report, Image (all tables created via Drizzle migrations)
 - Full CRUD operations with type-safe queries using Drizzle ORM
 
-**Authentication**: Simple JWT-based authentication for admin users
-- bcryptjs for password hashing
-- JWT tokens with 7-day expiration
-- Bearer token authentication middleware
-- Default admin account created on startup (username: "admin", password: "admin123")
+**Authentication**: 
+- **Admin Authentication**: JWT-based with Bearer token
+  - bcryptjs for password hashing
+  - JWT tokens with 7-day expiration
+  - Bearer token authentication middleware
+  - Default admin account created on startup (username: "admin", password: "admin123")
+- **Client Portal Authentication**: Secure HTTP-only cookie-based system
+  - Separate client_users table with email and password hash
+  - HTTP-only cookies prevent XSS attacks
+  - Secure flag (production + HTTPS only) prevents MITM
+  - SameSite=lax prevents CSRF attacks
+  - Token type field distinguishes admin vs client tokens
+  - 30-day cookie expiration
+  - cookie-parser middleware for parsing cookies
 
 **File Upload Handling**: Multer for multipart/form-data
 - Memory storage strategy (files stored in memory buffers)
@@ -72,7 +83,14 @@ Preferred communication style: Simple, everyday language.
 
 **API Structure**: RESTful endpoints organized by domain
 - Public routes: Form submission endpoints (no authentication)
-- Admin routes: CRUD operations for clients and reports (requires JWT)
+- Admin routes: CRUD operations for clients and reports (requires JWT Bearer token)
+- Client portal routes: Authentication and report viewing (requires HTTP-only cookie)
+  - POST /api/client/auth/login - Login with email/password, sets HTTP-only cookie
+  - POST /api/client/auth/logout - Clears authentication cookie
+  - GET /api/client/auth/me - Validate session and get user info
+  - GET /api/client/reports - List reports for authenticated client
+  - GET /api/client/reports/:id - Get specific report (client-scoped)
+  - GET /api/client/reports/:id/pdf - Download PDF (client-scoped)
 - Middleware for token verification on protected routes
 
 ### Data Storage Architecture
@@ -85,6 +103,11 @@ Preferred communication style: Simple, everyday language.
 **Data Models**:
 - **Admin**: Basic admin user with username and password hash
 - **Client**: Construction company with branding (logo, color), contact info, notification emails, and unique form slug
+- **ClientUser**: Portal authentication credentials linked to clients (added November 11, 2025)
+  - Email, password hash, active status
+  - One-to-many relationship with clients (multiple portal users per client supported)
+  - Last login timestamp tracking
+  - Admin-managed via client edit page
 - **Report**: Daily site report linked to client, contains form data, AI analysis, and processing status
 - **Image**: Site photos linked to reports with file paths and optional AI-generated captions
 - **Worker**: Individual worker names extracted from AI analysis, linked to reports with ON DELETE CASCADE
