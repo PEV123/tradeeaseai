@@ -13,12 +13,16 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function generateToken(adminId: string): string {
-  return jwt.sign({ adminId }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign({ adminId, tokenType: "admin" }, JWT_SECRET, { expiresIn: "7d" });
 }
 
-export function verifyToken(token: string): { adminId: string } | null {
+export function generateClientToken(clientUserId: string, clientId: string): string {
+  return jwt.sign({ clientUserId, clientId, tokenType: "client" }, JWT_SECRET, { expiresIn: "30d" });
+}
+
+export function verifyToken(token: string): { adminId?: string; clientUserId?: string; clientId?: string; tokenType: string } | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as { adminId: string };
+    return jwt.verify(token, JWT_SECRET) as { adminId?: string; clientUserId?: string; clientId?: string; tokenType: string };
   } catch {
     return null;
   }

@@ -2,11 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import express from "express";
 import { storage } from "./storage";
-import { initializeAdmin, hashPassword, verifyPassword, generateToken, verifyToken } from "./lib/auth";
+import { initializeAdmin, hashPassword, verifyPassword, generateToken, generateClientToken, verifyToken } from "./lib/auth";
 import { analyzeReport } from "./lib/openai";
 import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
-import { loginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema } from "@shared/schema";
+import { loginSchema, clientLoginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema, insertClientUserSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
 import path from "path";
@@ -29,11 +29,36 @@ function requireAuth(req: Request, res: Response, next: Function) {
   }
 
   const decoded = verifyToken(token);
-  if (!decoded) {
-    return res.status(401).json({ error: "Invalid token" });
+  if (!decoded || decoded.tokenType !== "admin" || !decoded.adminId) {
+    return res.status(401).json({ error: "Invalid admin token" });
   }
 
   (req as any).adminId = decoded.adminId;
+  next();
+}
+
+// Middleware to verify client token
+async function requireClientAuth(req: Request, res: Response, next: Function) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace("Bearer ", "");
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const decoded = verifyToken(token);
+  if (!decoded || decoded.tokenType !== "client" || !decoded.clientUserId || !decoded.clientId) {
+    return res.status(401).json({ error: "Invalid client token" });
+  }
+
+  // Verify client user exists and is active
+  const clientUser = await storage.getClientUser(decoded.clientUserId);
+  if (!clientUser || !clientUser.active) {
+    return res.status(401).json({ error: "Account is inactive" });
+  }
+
+  (req as any).clientUserId = decoded.clientUserId;
+  (req as any).clientId = decoded.clientId;
   next();
 }
 
@@ -229,6 +254,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, reportId: report.id });
     } catch (error: any) {
       console.error("Error submitting report:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ========== CLIENT AUTHENTICATION ROUTES ==========
+
+  // Client login
+  app.post("/api/client/auth/login", async (req: Request, res: Response) => {
+    try {
+      const { email, password } = clientLoginSchema.parse(req.body);
+
+      const clientUser = await storage.getClientUserByEmail(email);
+      if (!clientUser || !clientUser.active) {
+        return res.status(401).json({ success: false, error: "Invalid credentials" });
+      }
+
+      const isValid = await verifyPassword(password, clientUser.passwordHash);
+      if (!isValid) {
+        return res.status(401).json({ success: false, error: "Invalid credentials" });
+      }
+
+      // Update last login
+      await storage.updateClientUser(clientUser.id, { lastLogin: new Date() });
+
+      // Get client info
+      const client = await storage.getClient(clientUser.clientId);
+      if (!client) {
+        return res.status(500).json({ success: false, error: "Client not found" });
+      }
+
+      const token = generateClientToken(clientUser.id, clientUser.clientId);
+
+      res.json({
+        success: true,
+        token,
+        client,
+        clientUser: {
+          id: clientUser.id,
+          clientId: clientUser.clientId,
+          email: clientUser.email,
+          lastLogin: clientUser.lastLogin,
+          active: clientUser.active,
+          createdAt: clientUser.createdAt,
+        },
+      });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get current client user info
+  app.get("/api/client/auth/me", requireClientAuth, async (req: Request, res: Response) => {
+    try {
+      const clientUserId = (req as any).clientUserId;
+      const clientUser = await storage.getClientUser(clientUserId);
+      
+      if (!clientUser) {
+        return res.status(404).json({ error: "Client user not found" });
+      }
+
+      const client = await storage.getClient(clientUser.clientId);
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      res.json({
+        clientUser: {
+          id: clientUser.id,
+          clientId: clientUser.clientId,
+          email: clientUser.email,
+          lastLogin: clientUser.lastLogin,
+          active: clientUser.active,
+          createdAt: clientUser.createdAt,
+        },
+        client,
+      });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
