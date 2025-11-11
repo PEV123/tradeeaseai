@@ -14,11 +14,22 @@ interface PortalAccessCardProps {
   clientId: string;
 }
 
+// Generate a secure random password
+function generateSecurePassword(): string {
+  const length = 16;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return Array.from(array, (byte) => charset[byte % charset.length]).join("");
+}
+
 export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreating, setIsCreating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { data: client, isLoading: clientLoading } = useQuery({
     queryKey: [`/api/admin/clients/${clientId}`],
@@ -45,7 +56,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (password: string) => {
       const contactEmail = client?.contactEmail;
       if (!contactEmail) {
         throw new Error("Contact email not found");
@@ -58,7 +69,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: contactEmail, password: contactEmail }),
+        body: JSON.stringify({ email: contactEmail, password }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -68,24 +79,21 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
+      setShowPassword(true);
       toast({ 
         title: "Success", 
-        description: "Portal access created. Username and password are both set to the contact email." 
+        description: "Portal access created successfully" 
       });
-      setIsCreating(false);
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
+      setGeneratedPassword(null);
+      setIsCreating(false);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async () => {
-      const contactEmail = client?.contactEmail;
-      if (!contactEmail) {
-        throw new Error("Contact email not found");
-      }
-      
+    mutationFn: async (password: string) => {
       const token = localStorage.getItem("admin_token");
       const response = await fetch(`/api/admin/clients/${clientId}/portal-user`, {
         method: "PUT",
@@ -93,7 +101,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ password: contactEmail }),
+        body: JSON.stringify({ password }),
       });
       if (!response.ok) {
         const error = await response.json();
@@ -103,14 +111,16 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/admin/clients/${clientId}/portal-user`] });
+      setShowPassword(true);
       toast({ 
         title: "Success", 
-        description: "Password reset to contact email successfully" 
+        description: "Password reset successfully" 
       });
-      setIsResetting(false);
     },
     onError: (error: Error) => {
       toast({ variant: "destructive", title: "Error", description: error.message });
+      setGeneratedPassword(null);
+      setIsResetting(false);
     },
   });
 
@@ -138,15 +148,27 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
       toast({ variant: "destructive", title: "Error", description: "Contact email not found" });
       return;
     }
-    createMutation.mutate();
+    const password = generateSecurePassword();
+    setGeneratedPassword(password);
+    createMutation.mutate(password);
   };
 
   const handleReset = () => {
-    if (!client?.contactEmail) {
-      toast({ variant: "destructive", title: "Error", description: "Contact email not found" });
-      return;
-    }
-    updateMutation.mutate();
+    const password = generateSecurePassword();
+    setGeneratedPassword(password);
+    updateMutation.mutate(password);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: "Copied", description: "Password copied to clipboard" });
+  };
+
+  const handleDismissPassword = () => {
+    setShowPassword(false);
+    setGeneratedPassword(null);
+    setIsCreating(false);
+    setIsResetting(false);
   };
 
   if (clientLoading || portalUserLoading) {
@@ -175,11 +197,53 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
           Client Portal Access
         </CardTitle>
         <CardDescription>
-          Username and password are automatically set to the contact email
+          Secure login credentials for client portal access
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {portalUser?.exists ? (
+        {showPassword && generatedPassword && (
+          <div className="p-4 border-2 border-orange-500 rounded-md bg-orange-50 dark:bg-orange-950/20 space-y-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <p className="font-semibold text-orange-900 dark:text-orange-100">
+                  ⚠️ Save this password now
+                </p>
+                <p className="text-sm text-orange-800 dark:text-orange-200">
+                  This password will only be shown once. Copy it and share securely with the client.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="p-3 bg-background rounded-md border">
+                <p className="text-sm font-medium mb-1">Username</p>
+                <p className="font-mono text-sm">{client?.contactEmail}</p>
+              </div>
+              <div className="p-3 bg-background rounded-md border">
+                <p className="text-sm font-medium mb-1">Password</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-sm flex-1 break-all">{generatedPassword}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => copyToClipboard(generatedPassword)}
+                    data-testid="button-copy-password"
+                  >
+                    Copy
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleDismissPassword}
+              className="w-full"
+              data-testid="button-dismiss-password"
+            >
+              I've Saved the Password
+            </Button>
+          </div>
+        )}
+        
+        {portalUser?.exists && !showPassword ? (
           <>
             <div className="flex items-center justify-between p-4 border rounded-md">
               <div className="flex items-center gap-4">
@@ -211,7 +275,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
             {isResetting ? (
               <div className="space-y-4 p-4 border rounded-md bg-muted/50">
                 <p className="text-sm text-muted-foreground">
-                  This will reset the password to match the current contact email: <strong>{client?.contactEmail}</strong>
+                  This will generate a new secure password. The current password will no longer work.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -219,7 +283,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
                     disabled={updateMutation.isPending}
                     data-testid="button-confirm-reset"
                   >
-                    {updateMutation.isPending ? "Resetting..." : "Confirm Reset"}
+                    {updateMutation.isPending ? "Generating..." : "Generate New Password"}
                   </Button>
                   <Button
                     variant="outline"
@@ -271,16 +335,16 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
               </div>
             )}
           </>
-        ) : (
+        ) : !showPassword ? (
           <>
             {isCreating ? (
               <div className="space-y-4 p-4 border rounded-md bg-muted/50">
                 <p className="text-sm text-muted-foreground">
-                  Portal access will be created with the following credentials:
+                  A secure random password will be generated. You'll see it once to share with the client.
                 </p>
                 <div className="p-3 bg-background rounded-md border">
                   <p className="text-sm"><strong>Username:</strong> {client?.contactEmail}</p>
-                  <p className="text-sm"><strong>Password:</strong> {client?.contactEmail}</p>
+                  <p className="text-sm"><strong>Password:</strong> Secure random password (shown after creation)</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -306,7 +370,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
                   No portal access configured.
                 </p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Username and password will be set to: <strong>{client?.contactEmail}</strong>
+                  Username will be: <strong>{client?.contactEmail}</strong>
                 </p>
                 <Button onClick={() => setIsCreating(true)} data-testid="button-enable-portal">
                   <Shield className="h-4 w-4 mr-2" />
@@ -315,7 +379,7 @@ export default function PortalAccessCard({ clientId }: PortalAccessCardProps) {
               </div>
             )}
           </>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );
