@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Calendar, Download, Loader2, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Calendar, Download, Loader2, Users, CheckCircle2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 
 interface Report {
@@ -12,8 +14,10 @@ interface Report {
   projectName: string;
   reportDate: Date;
   createdAt: Date;
+  submittedAt: Date;
   status: string;
   pdfPath: string | null;
+  formData: any;
   aiAnalysis: any;
 }
 
@@ -32,6 +36,7 @@ interface Image {
 export default function ClientReportDetail() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  const [selectedImage, setSelectedImage] = useState<{ src: string; description: string } | null>(null);
 
   const { data: report, isLoading, error } = useQuery<Report>({
     queryKey: ["/api/client/reports", id],
@@ -115,6 +120,7 @@ export default function ClientReportDetail() {
   }
 
   const analysis = report.aiAnalysis;
+  const formData = report.formData;
 
   return (
     <div className="min-h-screen bg-background">
@@ -136,127 +142,229 @@ export default function ClientReportDetail() {
           )}
         </div>
 
+        {/* Header with project name and status */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-semibold mb-2" data-testid="text-project-name">
+            {report.projectName}
+          </h1>
+          <Badge 
+            className="bg-green-600 hover:bg-green-700 text-white"
+            data-testid="badge-status"
+          >
+            {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+          </Badge>
+        </div>
+
+        {/* Metadata */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <CardTitle>Report Metadata</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
-                <CardTitle className="text-2xl mb-2" data-testid="text-project-name">{report.projectName}</CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {format(new Date(report.reportDate), "PPP")}
-                  </span>
-                  <Badge variant={report.status === "completed" ? "default" : "secondary"} data-testid="badge-status">
-                    {report.status}
-                  </Badge>
-                </div>
+                <p className="text-sm text-muted-foreground mb-1">Report Date</p>
+                <p className="font-medium" data-testid="text-report-date">
+                  {format(new Date(report.reportDate), "MMM dd, yyyy")}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Submitted</p>
+                <p className="font-medium" data-testid="text-submitted-date">
+                  {report.submittedAt ? format(new Date(report.submittedAt), "MMM dd, yyyy HH:mm") : "N/A"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Images</p>
+                <p className="font-medium" data-testid="text-image-count">{images?.length || 0}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Report ID</p>
+                <p className="font-mono text-sm" data-testid="text-report-id">{report.id.slice(0, 8)}</p>
               </div>
             </div>
-          </CardHeader>
+          </CardContent>
         </Card>
 
-        {analysis && (
-          <>
-            {/* Workforce */}
-            {workers && workers.length > 0 && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Workforce ({workers.length} workers)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {workers.map((worker) => (
-                      <Badge key={worker.id} variant="secondary" data-testid={`badge-worker-${worker.id}`}>
-                        {worker.workerName}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        {/* Form Data */}
+        {formData && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Submitted Information</CardTitle>
+              <CardDescription>Data entered by site worker</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Works Performed</h4>
+                <p className="whitespace-pre-wrap" data-testid="text-form-works-performed">{formData.worksPerformed}</p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Labour on Site</h4>
+                  <p data-testid="text-form-labour">{formData.labourOnSite}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Hours Worked</h4>
+                  <p data-testid="text-form-hours">{formData.hoursWorked}</p>
+                </div>
+              </div>
 
-            {/* Works Performed */}
-            {analysis.works_performed && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Works Performed</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-wrap" data-testid="text-works-performed">{analysis.works_performed.detailed_description}</p>
-                </CardContent>
-              </Card>
-            )}
+              {formData.plantMachinery && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Plant & Machinery</h4>
+                  <p data-testid="text-form-plant">{formData.plantMachinery}</p>
+                </div>
+              )}
 
-            {/* Site Conditions */}
-            {analysis.site_conditions && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Site Conditions</CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Weather</p>
-                    <p data-testid="text-weather">{analysis.site_conditions.weather}</p>
-                  </div>
-                  {analysis.site_conditions.temperature && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Temperature</p>
-                      <p data-testid="text-temperature">{analysis.site_conditions.temperature}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
+              {formData.materialsUsed && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Materials Used</h4>
+                  <p data-testid="text-form-materials">{formData.materialsUsed}</p>
+                </div>
+              )}
 
-            {/* Materials */}
-            {analysis.materials_tracking && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Materials</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-wrap" data-testid="text-materials">{analysis.materials_tracking.summary}</p>
-                </CardContent>
-              </Card>
-            )}
+              {formData.delaysWeather && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-2">Delays / Weather</h4>
+                  <p data-testid="text-form-delays">{formData.delaysWeather}</p>
+                </div>
+              )}
 
-            {/* Safety */}
-            {analysis.safety_observations && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Safety Observations</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="whitespace-pre-wrap" data-testid="text-safety">{analysis.safety_observations.summary}</p>
-                </CardContent>
-              </Card>
-            )}
-          </>
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Safety Incidents</h4>
+                <p data-testid="text-form-safety">{formData.safetyIncidents}</p>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Images */}
+        {/* AI Analysis */}
+        {analysis && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-primary" />
+                AI-Generated Report Analysis
+              </CardTitle>
+              <CardDescription>Professional report generated by GPT-5</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {analysis.works_summary && (
+                <div>
+                  <h4 className="text-lg font-semibold mb-2">{analysis.works_summary.title}</h4>
+                  <p className="text-muted-foreground mb-3">{analysis.works_summary.description}</p>
+                  {analysis.works_summary.key_activities && analysis.works_summary.key_activities.length > 0 && (
+                    <ul className="list-disc list-inside space-y-1">
+                      {analysis.works_summary.key_activities.map((activity: string, i: number) => (
+                        <li key={i}>{activity}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {analysis.workforce && (
+                <>
+                  <div className="grid md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Workers</p>
+                      <p className="text-2xl font-semibold">{analysis.workforce.total_workers}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Hours</p>
+                      <p className="text-2xl font-semibold">{analysis.workforce.total_hours}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Man Hours</p>
+                      <p className="text-2xl font-semibold">{analysis.workforce.man_hours}</p>
+                    </div>
+                  </div>
+                  {workers && workers.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        Worker Names
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {workers.map((worker) => (
+                          <Badge key={worker.id} variant="secondary" data-testid={`badge-worker-${worker.id}`}>
+                            {worker.workerName}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {analysis.materials?.items_used && analysis.materials.items_used.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-3">Materials Used</h4>
+                  <div className="space-y-2">
+                    {analysis.materials.items_used.map((item: any, i: number) => (
+                      <div key={i} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                        <span>{item.material}</span>
+                        <Badge variant="secondary">{item.quantity} {item.unit}</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {analysis.safety_incidents?.safety_observations && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Safety Observations
+                  </h4>
+                  <p>{analysis.safety_incidents.safety_observations}</p>
+                </div>
+              )}
+
+              {analysis.next_day_plan?.scheduled_works && analysis.next_day_plan.scheduled_works.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Next Day Plan</h4>
+                  <ul className="list-disc list-inside space-y-1">
+                    {analysis.next_day_plan.scheduled_works.map((work: string, i: number) => (
+                      <li key={i}>{work}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Site Images */}
         {images && images.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Site Photos ({images.length})</CardTitle>
+              <CardTitle>Site Photos</CardTitle>
+              <CardDescription>{images.length} images from construction site</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {images.map((image) => (
-                  <div key={image.id} className="space-y-2" data-testid={`image-container-${image.id}`}>
+                  <div 
+                    key={image.id} 
+                    className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover-elevate active-elevate-2"
+                    onClick={() => setSelectedImage({ 
+                      src: `/${image.filePath}`, 
+                      description: image.aiDescription || "Site photo" 
+                    })}
+                    data-testid={`button-view-image-${image.id}`}
+                  >
                     <img
                       src={`/${image.filePath}`}
                       alt={image.aiDescription || "Site photo"}
-                      className="w-full rounded-md border"
-                      data-testid={`img-${image.id}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      data-testid={`img-site-photo-${image.id}`}
                     />
                     {image.aiDescription && (
-                      <p className="text-sm text-muted-foreground" data-testid={`text-caption-${image.id}`}>
-                        {image.aiDescription}
-                      </p>
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity p-3 flex items-end">
+                        <p className="text-xs text-white">{image.aiDescription}</p>
+                      </div>
                     )}
                   </div>
                 ))}
@@ -265,6 +373,27 @@ export default function ClientReportDetail() {
           </Card>
         )}
       </div>
+
+      {/* Image Modal */}
+      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Site Photo</DialogTitle>
+          </DialogHeader>
+          {selectedImage && (
+            <div className="space-y-4">
+              <img
+                src={selectedImage.src}
+                alt={selectedImage.description}
+                className="w-full h-auto rounded-lg"
+              />
+              {selectedImage.description && (
+                <p className="text-sm text-muted-foreground">{selectedImage.description}</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
