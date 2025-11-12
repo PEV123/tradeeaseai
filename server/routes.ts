@@ -108,6 +108,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = req.files as Express.Multer.File[];
       const data = JSON.parse(req.body.data);
       
+      // Construct base URL for webhook
+      const protocol = req.protocol;
+      const host = req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+      
       // Validate report data
       const validated = insertReportSchema.parse(data);
 
@@ -269,6 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               notificationEmails: client.notificationEmails,
               clientLogoPath: client.logoPath,
               clientBrandColor: client.brandColor,
+              baseUrl,
             });
           }
         } catch (error: any) {

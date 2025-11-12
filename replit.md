@@ -183,21 +183,33 @@ Preferred communication style: Simple, everyday language.
 - Uses axios for reliable FormData handling in Node.js
 
 **Webhook Payload**:
-- `pdf` (file): Generated PDF report
-- `reportId`: Report identifier
-- `clientId`: Client identifier
-- `clientName`: Company name
-- `projectName`: Project name
-- `reportDate`: Report date
-- `formData`: Complete form submission data (JSON)
-- `aiAnalysis`: GPT-5 analysis results (JSON)
-- `notificationEmails`: Email recipients list (JSON)
+- `pdf` (file): Generated PDF report attachment
+- `data` (JSON string): Complete report data including:
+  - `reportId`: Report identifier
+  - `clientId`: Client identifier
+  - `clientName`: Company name
+  - `projectName`: Project name
+  - `reportDate`: Report date
+  - `formData`: Complete form submission data
+  - `aiAnalysis`: GPT-5 analysis results
+  - `notificationEmails`: Email recipients list
+  - `emailHtml`: Pre-built HTML email template with image URLs
+
+**Email HTML Template** (November 12, 2025):
+- **URL-based images**: Uses image URLs instead of base64 encoding for smaller payload size
+- **TradeEase AI logo**: External URL (placeholder: icons8 worker icon)
+- **Client logo**: Constructed as `${baseUrl}/${logoPath}` (e.g., `https://domain/storage/logos/file.png`)
+- **Client branding**: Uses client brand color throughout design
+- **Comprehensive sections**: Report summary, AI analysis, works performed, labour, materials, safety
+- **Email-compatible**: Table-based layout with inline CSS, 600px width
+- **Base URL**: Automatically extracted from request as `${protocol}://${host}`
 
 **Integration Flow**:
 1. Form submitted → AI analysis → PDF generation
 2. After PDF created and saved, webhook is triggered
-3. PDF + data sent to n8n for email distribution
-4. Non-blocking: webhook failures don't affect report completion
+3. Email HTML generated with image URLs (not base64)
+4. PDF + complete JSON data sent to n8n for email distribution
+5. Non-blocking: webhook failures don't affect report completion
 
 ### Build and Development Architecture
 

@@ -1,12 +1,11 @@
 import FormData from 'form-data';
 import { promises as fs } from 'fs';
 import axios from 'axios';
-import path from 'path';
 
 const WEBHOOK_URL = 'https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc';
 
-// TradeEase AI logo as base64 (placeholder - you can replace with actual logo)
-const TRADEASE_LOGO_BASE64 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iNjAiIGZpbGw9IiNFODc2NEIiLz48dGV4dCB4PSIxMDAiIHk9IjM1IiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VHJhZGVFYXNlIEFJPC90ZXh0Pjwvc3ZnPg==';
+// TradeEase AI logo URL (served from static assets)
+const TRADEASE_LOGO_URL = 'https://img.icons8.com/fluency/96/worker-male.png'; // Placeholder - replace with actual logo URL
 
 interface WebhookPayload {
   reportId: string;
@@ -20,22 +19,15 @@ interface WebhookPayload {
   notificationEmails: string[];
   clientLogoPath?: string | null;
   clientBrandColor?: string;
+  baseUrl: string;
 }
 
 async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
-  // Convert client logo to base64 if it exists
-  let clientLogoBase64 = '';
+  // Construct client logo URL if it exists
+  let clientLogoUrl = '';
   if (payload.clientLogoPath) {
-    try {
-      const logoBuffer = await fs.readFile(payload.clientLogoPath);
-      const ext = path.extname(payload.clientLogoPath).toLowerCase();
-      let mimeType = 'image/png';
-      if (ext === '.jpg' || ext === '.jpeg') mimeType = 'image/jpeg';
-      else if (ext === '.svg') mimeType = 'image/svg+xml';
-      clientLogoBase64 = `data:${mimeType};base64,${logoBuffer.toString('base64')}`;
-    } catch (error) {
-      console.warn('[Webhook] Failed to load client logo:', error);
-    }
+    // Convert storage path to URL: "storage/logos/file.png" -> "https://domain/storage/logos/file.png"
+    clientLogoUrl = `${payload.baseUrl}/${payload.clientLogoPath}`;
   }
 
   const brandColor = payload.clientBrandColor || '#E8764B';
@@ -74,16 +66,16 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
           <!-- Header with TradeEase AI branding -->
           <tr>
             <td style="background-color: ${brandColor}; padding: 30px 20px; text-align: center;">
-              <img src="${TRADEASE_LOGO_BASE64}" alt="TradeEase AI" style="max-width: 200px; height: auto; margin-bottom: 15px;">
+              <img src="${TRADEASE_LOGO_URL}" alt="TradeEase AI" style="max-width: 200px; height: auto; margin-bottom: 15px;">
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Daily Site Report</h1>
             </td>
           </tr>
 
           <!-- Client Logo (if exists) -->
-          ${clientLogoBase64 ? `
+          ${clientLogoUrl ? `
           <tr>
             <td style="padding: 20px; text-align: center; background-color: #fafafa; border-bottom: 1px solid #e0e0e0;">
-              <img src="${clientLogoBase64}" alt="${payload.clientName}" style="max-width: 150px; max-height: 80px; object-fit: contain;">
+              <img src="${clientLogoUrl}" alt="${payload.clientName}" style="max-width: 150px; max-height: 80px; object-fit: contain;">
             </td>
           </tr>
           ` : ''}
@@ -201,7 +193,7 @@ export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
   try {
     console.log(`[Webhook] Sending report ${payload.reportId} to n8n webhook...`);
 
-    // Generate email HTML with base64 images
+    // Generate email HTML with image URLs
     const emailHtml = await generateEmailHtml(payload);
 
     const form = new FormData();
