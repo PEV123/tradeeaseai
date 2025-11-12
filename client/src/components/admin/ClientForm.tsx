@@ -18,7 +18,9 @@ interface ClientFormProps {
 
 export default function ClientForm({ client, onSubmit, onCancel, isLoading = false }: ClientFormProps) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(client?.logoPath || null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    client?.logoPath ? `/${client.logoPath}` : null
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertClient>({
