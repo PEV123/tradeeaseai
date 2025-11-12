@@ -267,6 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               aiAnalysis,
               pdfPath,
               notificationEmails: client.notificationEmails,
+              clientLogoPath: client.logoPath,
+              clientBrandColor: client.brandColor,
             });
           }
         } catch (error: any) {
