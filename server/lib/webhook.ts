@@ -4,9 +4,6 @@ import axios from 'axios';
 
 const WEBHOOK_URL = 'https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc';
 
-// TradeEase AI logo URL (served from static assets)
-const TRADEASE_LOGO_URL = 'https://img.icons8.com/fluency/96/worker-male.png'; // Placeholder - replace with actual logo URL
-
 interface WebhookPayload {
   reportId: string;
   clientId: string;
@@ -23,6 +20,9 @@ interface WebhookPayload {
 }
 
 async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
+  // Construct TradeEase AI logo URL
+  const tradeaseLogoUrl = `${payload.baseUrl}/storage/logos/tradease-ai-logo.png`;
+  
   // Construct client logo URL if it exists
   let clientLogoUrl = '';
   if (payload.clientLogoPath) {
@@ -66,7 +66,7 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
           <!-- Header with TradeEase AI branding -->
           <tr>
             <td style="background-color: ${brandColor}; padding: 30px 20px; text-align: center;">
-              <img src="${TRADEASE_LOGO_URL}" alt="TradeEase AI" style="max-width: 200px; height: auto; margin-bottom: 15px;">
+              <img src="${tradeaseLogoUrl}" alt="TradeEase AI" style="max-width: 200px; height: auto; margin-bottom: 15px;">
               <h1 style="color: white; margin: 0; font-size: 28px; font-weight: bold;">Daily Site Report</h1>
             </td>
           </tr>

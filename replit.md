@@ -197,12 +197,13 @@ Preferred communication style: Simple, everyday language.
 
 **Email HTML Template** (November 12, 2025):
 - **URL-based images**: Uses image URLs instead of base64 encoding for smaller payload size
-- **TradeEase AI logo**: External URL (placeholder: icons8 worker icon)
+- **TradeEase AI logo**: Served from `storage/logos/tradease-ai-logo.png` as `${baseUrl}/storage/logos/tradease-ai-logo.png`
 - **Client logo**: Constructed as `${baseUrl}/${logoPath}` (e.g., `https://domain/storage/logos/file.png`)
 - **Client branding**: Uses client brand color throughout design
 - **Comprehensive sections**: Report summary, AI analysis, works performed, labour, materials, safety
 - **Email-compatible**: Table-based layout with inline CSS, 600px width
 - **Base URL**: Automatically extracted from request as `${protocol}://${host}`
+- **Branding**: All user-facing text uses generic "AI" terminology instead of specific model names
 
 **Integration Flow**:
 1. Form submitted → AI analysis → PDF generation
