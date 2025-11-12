@@ -6,6 +6,7 @@ import { initializeAdmin, hashPassword, verifyPassword, generateToken, generateC
 import { analyzeReport } from "./lib/openai";
 import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
+import { sendToWebhook } from "./lib/webhook";
 import { loginSchema, clientLoginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema, insertClientUserSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
@@ -254,6 +255,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             // Send email notification
             await sendReportEmail(client, report.id, validated.projectName, new Date(validated.reportDate), pdfPath);
+
+            // Send to n8n webhook for email distribution
+            await sendToWebhook({
+              reportId: report.id,
+              clientId: client.id,
+              clientName: client.companyName,
+              projectName: validated.projectName,
+              reportDate: validated.reportDate,
+              formData: validated,
+              aiAnalysis,
+              pdfPath,
+              notificationEmails: client.notificationEmails,
+            });
           }
         } catch (error: any) {
           console.error("Error processing report:", error);

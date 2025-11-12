@@ -174,6 +174,31 @@ Preferred communication style: Simple, everyday language.
 - Professional formatting
 - File attachment (PDF report)
 
+### Webhook Integration Architecture
+
+**Webhook Service** (`server/lib/webhook.ts`):
+- Sends completed reports to n8n webhook for email distribution
+- POST request with multipart/form-data containing PDF + report data
+- Webhook URL: https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc
+- Uses axios for reliable FormData handling in Node.js
+
+**Webhook Payload**:
+- `pdf` (file): Generated PDF report
+- `reportId`: Report identifier
+- `clientId`: Client identifier
+- `clientName`: Company name
+- `projectName`: Project name
+- `reportDate`: Report date
+- `formData`: Complete form submission data (JSON)
+- `aiAnalysis`: GPT-5 analysis results (JSON)
+- `notificationEmails`: Email recipients list (JSON)
+
+**Integration Flow**:
+1. Form submitted → AI analysis → PDF generation
+2. After PDF created and saved, webhook is triggered
+3. PDF + data sent to n8n for email distribution
+4. Non-blocking: webhook failures don't affect report completion
+
 ### Build and Development Architecture
 
 **Development Mode**:
