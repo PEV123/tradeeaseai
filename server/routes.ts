@@ -803,12 +803,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete client portal user
   app.delete("/api/admin/clients/:id/portal-user", requireAuth, async (req: Request, res: Response) => {
     try {
-      const clientUsers = await storage.getClientUsersByClient(req.params.id);
-      if (clientUsers.length === 0) {
+      const deleted = await storage.deleteClientUserByClientId(req.params.id);
+      if (!deleted) {
         return res.status(404).json({ error: "Portal user not found" });
       }
 
-      await storage.deleteClientUser(clientUsers[0].id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
