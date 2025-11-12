@@ -173,7 +173,7 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
                 This report was automatically generated and analyzed by <strong>TradeEase AI</strong>
               </p>
               <p style="margin: 0; color: #999; font-size: 12px;">
-                Powered by GPT-5 Vision • © ${new Date().getFullYear()} TradeEase AI
+                © ${new Date().getFullYear()} TradeEase AI
               </p>
             </td>
           </tr>

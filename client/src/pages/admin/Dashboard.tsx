@@ -146,7 +146,7 @@ export default function Dashboard() {
                 Review AI reports
               </h4>
               <p className="text-sm text-muted-foreground ml-8">
-                GPT-5 analyzes photos and generates professional PDF reports automatically
+                AI analyzes photos and generates professional PDF reports automatically
               </p>
             </div>
           </CardContent>

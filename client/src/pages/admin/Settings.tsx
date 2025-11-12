@@ -95,7 +95,7 @@ export default function Settings() {
             <div>
               <CardTitle>OpenAI API Key</CardTitle>
               <CardDescription>
-                Configure your OpenAI API key to enable GPT-5 image analysis
+                Configure your OpenAI API key to enable AI-powered image analysis
               </CardDescription>
             </div>
           </div>
@@ -153,12 +153,12 @@ export default function Settings() {
             </div>
 
             <div className="rounded-lg border bg-card p-4 space-y-3">
-              <p className="text-sm font-medium">About GPT-5 Analysis</p>
+              <p className="text-sm font-medium">About AI Analysis</p>
               <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
-                <li>Analyzes site photos using GPT-5 vision capabilities</li>
+                <li>Analyzes site photos using advanced vision AI</li>
                 <li>Extracts detailed information from images and form data</li>
                 <li>Generates structured JSON reports with AI insights</li>
-                <li>Model: gpt-5-2025-08-07 (released August 2025)</li>
+                <li>Provides professional construction site analysis</li>
               </ul>
             </div>
 
@@ -192,7 +192,7 @@ export default function Settings() {
             <div>
               <CardTitle>AI Analysis Prompt</CardTitle>
               <CardDescription>
-                Customize the GPT-5 prompt template used for analyzing site reports and images
+                Customize the AI prompt template used for analyzing site reports and images
               </CardDescription>
             </div>
           </div>
