@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { pgTable, varchar, text, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
+import { pgTable, varchar, text, timestamp, boolean, jsonb, integer, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
@@ -46,7 +46,10 @@ export const images = pgTable("images", {
   aiDescription: text("ai_description"),
   imageOrder: integer("image_order").notNull(),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicate images for the same report and order
+  uniqueReportImage: unique().on(table.reportId, table.imageOrder),
+}));
 
 export const settings = pgTable("settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

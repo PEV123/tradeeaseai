@@ -913,6 +913,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get images for a report
+  app.get("/api/reports/:id/images", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const images = await storage.getImagesByReport(req.params.id);
+      res.json(images);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get workers for a report
   app.get("/api/reports/:id/workers", requireAuth, async (req: Request, res: Response) => {
     try {

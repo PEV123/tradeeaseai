@@ -70,12 +70,11 @@ export async function uploadFile(
     const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(`public/${filePath}`);
 
-    // Upload the buffer
+    // Upload the buffer (no public ACL - access controlled by bucket IAM)
     await file.save(buffer, {
       metadata: {
         contentType,
       },
-      public: true, // Make files publicly accessible
     });
 
     console.log(`✅ Uploaded file to object storage: public/${filePath}`);
