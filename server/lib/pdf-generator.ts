@@ -420,7 +420,10 @@ function generateReportHTML(
           if (typeof incident === 'string') {
             return `<li>${incident}</li>`;
           }
-          return `<li><strong>${incident.person || 'Worker'}:</strong> ${incident.description || incident}${incident.action_taken ? `<br><em>Action taken: ${incident.action_taken}</em>` : ''}</li>`;
+          const person = incident.person || 'Worker';
+          const description = incident.description || 'Incident reported - details unavailable';
+          const actionTaken = incident.action_taken || '';
+          return `<li><strong>${person}:</strong> ${description}${actionTaken ? `<br><em>Action taken: ${actionTaken}</em>` : ''}</li>`;
         }).join('')}
       </ul>
     ` : ''}

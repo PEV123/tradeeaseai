@@ -42,7 +42,31 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
   const labourOnSite = payload.formData?.labourOnSite || 'N/A';
   const hoursWorked = payload.formData?.hoursWorked || 'N/A';
   const materialsUsed = payload.formData?.materialsUsed || 'N/A';
-  const safetyIncidents = payload.formData?.safetyIncidents || 'None reported';
+  
+  // Format safety incidents from AI analysis if available
+  let safetyIncidentsHtml = 'None reported';
+  if (payload.aiAnalysis?.safety_incidents?.incidents_reported && 
+      payload.aiAnalysis.safety_incidents.incidents_reported.length > 0) {
+    safetyIncidentsHtml = payload.aiAnalysis.safety_incidents.incidents_reported
+      .map((incident: any) => {
+        if (typeof incident === 'string') {
+          return `<div style="margin-bottom: 10px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                    <p style="margin: 0; color: #856404;">${incident}</p>
+                  </div>`;
+        }
+        const person = incident.person || 'Worker';
+        const description = incident.description || 'Incident reported - details unavailable';
+        const actionTaken = incident.action_taken || '';
+        return `<div style="margin-bottom: 10px; padding: 10px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                  <p style="margin: 0; color: #856404;"><strong>${person}:</strong> ${description}</p>
+                  ${actionTaken ? `<p style="margin: 5px 0 0 0; color: #856404; font-size: 13px;"><em>Action taken: ${actionTaken}</em></p>` : ''}
+                </div>`;
+      }).join('');
+  } else if (payload.formData?.safetyIncidents && 
+             payload.formData.safetyIncidents.toLowerCase() !== 'none' &&
+             payload.formData.safetyIncidents.toLowerCase() !== 'none reported') {
+    safetyIncidentsHtml = payload.formData.safetyIncidents;
+  }
 
   // Extract AI analysis highlights
   const weather = payload.aiAnalysis?.site_conditions?.weather || 'N/A';
@@ -155,7 +179,7 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
               <h3 style="color: #333; margin: 30px 0 15px 0; font-size: 18px; border-bottom: 2px solid ${brandColor}; padding-bottom: 8px;">
                 ⚠️ Safety Incidents
               </h3>
-              <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">${safetyIncidents}</p>
+              <div style="margin: 0 0 20px 0;">${safetyIncidentsHtml}</div>
 
               <!-- PDF Attachment Notice -->
               <div style="background-color: #e8f4fd; border-left: 4px solid #2196F3; padding: 15px; margin-top: 30px; border-radius: 4px;">

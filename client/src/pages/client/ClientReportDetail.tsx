@@ -318,7 +318,9 @@ export default function ClientReportDetail() {
                           <p>{incident}</p>
                         ) : (
                           <>
-                            <p className="font-medium">{incident.person || 'Worker'}: {incident.description}</p>
+                            <p className="font-medium">
+                              {incident.person || 'Worker'}: {incident.description || 'Incident reported - details unavailable'}
+                            </p>
                             {incident.action_taken && (
                               <p className="text-sm text-muted-foreground mt-2">
                                 <strong>Action taken:</strong> {incident.action_taken}
