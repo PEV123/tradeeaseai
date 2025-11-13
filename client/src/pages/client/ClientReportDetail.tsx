@@ -305,6 +305,33 @@ export default function ClientReportDetail() {
                 </div>
               )}
 
+              {analysis.safety_incidents?.incidents_reported && analysis.safety_incidents.incidents_reported.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    Incidents Reported
+                  </h4>
+                  <div className="space-y-3">
+                    {analysis.safety_incidents.incidents_reported.map((incident: any, i: number) => (
+                      <div key={i} className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        {typeof incident === 'string' ? (
+                          <p>{incident}</p>
+                        ) : (
+                          <>
+                            <p className="font-medium">{incident.person || 'Worker'}: {incident.description}</p>
+                            {incident.action_taken && (
+                              <p className="text-sm text-muted-foreground mt-2">
+                                <strong>Action taken:</strong> {incident.action_taken}
+                              </p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {analysis.safety_incidents?.safety_observations && (
                 <div>
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
