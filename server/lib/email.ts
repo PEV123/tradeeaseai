@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
 import { type Client } from "@shared/schema";
 import fs from "fs/promises";
+import path from "path";
+import { downloadFile } from "./storage-service";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -19,7 +21,14 @@ export async function sendReportEmail(
   reportDate: Date,
   pdfPath: string
 ): Promise<void> {
-  const pdfBuffer = await fs.readFile(pdfPath);
+  // Load PDF from object storage if path starts with /, otherwise use local filesystem
+  let pdfBuffer: Buffer;
+  if (pdfPath.startsWith('/')) {
+    pdfBuffer = await downloadFile(pdfPath);
+  } else {
+    const fullPath = path.isAbsolute(pdfPath) ? pdfPath : path.join(process.cwd(), pdfPath);
+    pdfBuffer = await fs.readFile(fullPath);
+  }
 
   const mailOptions = {
     from: process.env.SMTP_FROM || "noreply@tradeaseai.com",

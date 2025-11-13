@@ -1,6 +1,8 @@
 import FormData from 'form-data';
 import { promises as fs } from 'fs';
 import axios from 'axios';
+import path from 'path';
+import { downloadFile } from './storage-service';
 
 const WEBHOOK_URL = 'https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc';
 
@@ -222,8 +224,15 @@ export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
 
     const form = new FormData();
     
-    // Add PDF file as attachment
-    const pdfBuffer = await fs.readFile(payload.pdfPath);
+    // Add PDF file as attachment - load from object storage if path starts with /
+    let pdfBuffer: Buffer;
+    if (payload.pdfPath.startsWith('/')) {
+      pdfBuffer = await downloadFile(payload.pdfPath);
+    } else {
+      const fullPath = path.isAbsolute(payload.pdfPath) ? payload.pdfPath : path.join(process.cwd(), payload.pdfPath);
+      pdfBuffer = await fs.readFile(fullPath);
+    }
+    
     form.append('pdf', pdfBuffer, {
       filename: `report_${payload.reportId}.pdf`,
       contentType: 'application/pdf',

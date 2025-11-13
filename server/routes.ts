@@ -7,6 +7,7 @@ import { analyzeReport } from "./lib/openai";
 import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
 import { sendToWebhook } from "./lib/webhook";
+import { uploadFile, downloadFile } from "./lib/storage-service";
 import { loginSchema, clientLoginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema, insertClientUserSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
@@ -150,52 +151,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           else if (file.mimetype === 'image/webp') ext = 'webp';
           
           const fileName = `${report.id}_${i}_${Date.now()}.${ext}`;
-          const filePath = path.join('storage', 'images', fileName);
-
-          // Try to process with Sharp for optimization, fallback to raw save if it fails
-          let fileWriteSuccess = false;
+          
+          // Process image with Sharp
+          let imageBuffer: Buffer;
           try {
-            await sharp(file.buffer)
+            imageBuffer = await sharp(file.buffer)
               .rotate() // Auto-rotate based on EXIF orientation
               .resize(1920, 1920, { fit: 'inside', withoutEnlargement: true })
               .jpeg({ quality: 85 })
-              .toFile(filePath);
-            fileWriteSuccess = true;
+              .toBuffer();
           } catch (sharpError) {
-            console.warn(`Sharp processing failed for image ${i}, saving raw file:`, sharpError);
-            // Fallback: save raw buffer directly
-            try {
-              const fs = await import('fs/promises');
-              await fs.writeFile(filePath, file.buffer);
-              fileWriteSuccess = true;
-            } catch (writeError) {
-              console.error(`CRITICAL: Failed to write image ${i} to disk:`, writeError);
-              fileWriteSuccess = false;
-            }
+            console.warn(`Sharp processing failed for image ${i}, using raw buffer:`, sharpError);
+            imageBuffer = file.buffer;
           }
 
-          // Verify file was actually written to disk
-          if (!fileWriteSuccess) {
-            throw new Error(`Failed to write image file ${i} to disk - file write operation failed`);
-          }
-          
-          // Double-check file exists on disk
-          const fs = await import('fs/promises');
-          try {
-            await fs.access(filePath);
-          } catch (accessError) {
-            throw new Error(`Failed to write image file ${i} to disk - file does not exist after write operation`);
-          }
+          // Upload to object storage
+          const objectPath = await uploadFile(
+            `images/${fileName}`,
+            imageBuffer,
+            file.mimetype
+          );
 
           // Convert to base64 for GPT-5
-          const base64 = file.buffer.toString('base64');
+          const base64 = imageBuffer.toString('base64');
           imageBase64Array.push(base64);
-          imagePaths.push(filePath);
+          imagePaths.push(objectPath);
 
-          // Save image record ONLY if file write succeeded
+          // Save image record with object storage path
           await storage.createImage({
             reportId: report.id,
-            filePath,
+            filePath: objectPath,
             fileName,
             aiDescription: null,
             imageOrder: i,

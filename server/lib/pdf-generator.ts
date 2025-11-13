@@ -2,6 +2,7 @@ import puppeteer from "puppeteer";
 import { type Report, type Client, type Image } from "@shared/schema";
 import fs from "fs/promises";
 import path from "path";
+import { downloadFile, uploadFile } from "./storage-service";
 
 export async function generatePDF(
   report: Report,
@@ -12,8 +13,15 @@ export async function generatePDF(
   const imagesWithBase64 = await Promise.all(
     images.map(async (img) => {
       try {
-        const imagePath = path.join(process.cwd(), img.filePath);
-        const imageBuffer = await fs.readFile(imagePath);
+        // Load from object storage if path starts with /, otherwise try local filesystem
+        let imageBuffer: Buffer;
+        if (img.filePath.startsWith('/')) {
+          imageBuffer = await downloadFile(img.filePath);
+        } else {
+          const imagePath = path.join(process.cwd(), img.filePath);
+          imageBuffer = await fs.readFile(imagePath);
+        }
+        
         const base64 = imageBuffer.toString('base64');
         const mimeType = img.fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
         return {
@@ -31,8 +39,15 @@ export async function generatePDF(
   let logoBase64 = '';
   if (client.logoPath) {
     try {
-      const logoPath = path.join(process.cwd(), client.logoPath);
-      const logoBuffer = await fs.readFile(logoPath);
+      // Load from object storage if path starts with /, otherwise try local filesystem
+      let logoBuffer: Buffer;
+      if (client.logoPath.startsWith('/')) {
+        logoBuffer = await downloadFile(client.logoPath);
+      } else {
+        const logoPath = path.join(process.cwd(), client.logoPath);
+        logoBuffer = await fs.readFile(logoPath);
+      }
+      
       const base64 = logoBuffer.toString('base64');
       const mimeType = client.logoPath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
       logoBase64 = `data:${mimeType};base64,${base64}`;
@@ -107,19 +122,22 @@ export async function generatePDF(
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
-  const pdfDir = path.join(process.cwd(), 'storage', 'pdfs');
-  await fs.mkdir(pdfDir, { recursive: true });
-
-  const pdfPath = path.join(pdfDir, `${report.id}.pdf`);
-
-  await page.pdf({
-    path: pdfPath,
+  // Generate PDF to buffer
+  const pdfBuffer = await page.pdf({
     format: 'A4',
     printBackground: true,
     margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' }
   });
 
   await browser.close();
+
+  // Upload PDF to object storage
+  const pdfFileName = `${report.id}.pdf`;
+  const pdfPath = await uploadFile(
+    `pdfs/${pdfFileName}`,
+    pdfBuffer,
+    'application/pdf'
+  );
 
   return pdfPath;
 }
