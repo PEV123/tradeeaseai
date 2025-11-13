@@ -416,7 +416,12 @@ function generateReportHTML(
     ${aiAnalysis.safety_incidents.incidents_reported && aiAnalysis.safety_incidents.incidents_reported.length > 0 ? `
       <div class="subsection-title">Incidents Reported:</div>
       <ul>
-        ${aiAnalysis.safety_incidents.incidents_reported.map((incident: string) => `<li>${incident}</li>`).join('')}
+        ${aiAnalysis.safety_incidents.incidents_reported.map((incident: any) => {
+          if (typeof incident === 'string') {
+            return `<li>${incident}</li>`;
+          }
+          return `<li><strong>${incident.person || 'Worker'}:</strong> ${incident.description || incident}${incident.action_taken ? `<br><em>Action taken: ${incident.action_taken}</em>` : ''}</li>`;
+        }).join('')}
       </ul>
     ` : ''}
     ${aiAnalysis.safety_incidents.safety_observations ? `
