@@ -88,6 +88,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== PUBLIC ROUTES ==========
 
+  // Serve files from object storage with filesystem fallback
+  app.get("/storage/*", async (req: Request, res: Response) => {
+    try {
+      // Extract full path after /storage/
+      const storagePath = req.params[0];
+      
+      if (!storagePath) {
+        return res.status(400).json({ error: 'Invalid path' });
+      }
+      
+      // Determine content type based on file extension
+      let contentType = 'application/octet-stream';
+      if (storagePath.endsWith('.jpg') || storagePath.endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+      } else if (storagePath.endsWith('.png')) {
+        contentType = 'image/png';
+      } else if (storagePath.endsWith('.pdf')) {
+        contentType = 'application/pdf';
+      } else if (storagePath.endsWith('.webp')) {
+        contentType = 'image/webp';
+      }
+      
+      // Try object storage first
+      try {
+        // Check if path already has public/ prefix (new format) or needs it added
+        const objectPath = storagePath.startsWith('public/') 
+          ? `/${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID}/${storagePath}`
+          : `/${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID}/public/${storagePath}`;
+        const fileBuffer = await downloadFile(objectPath);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+        res.send(fileBuffer);
+      } catch (objectError) {
+        // Fallback to local filesystem for backwards compatibility
+        const localPath = path.join(process.cwd(), 'storage', storagePath);
+        try {
+          await fs.access(localPath);
+          const fileBuffer = await fs.readFile(localPath);
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=31536000');
+          res.send(fileBuffer);
+        } catch (fsError) {
+          console.log(`File not found in object storage or filesystem: ${storagePath}`);
+          res.status(404).json({ error: 'File not found' });
+        }
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get client by form slug (public)
   app.get("/api/public/client/:slug", async (req: Request, res: Response) => {
     try {
@@ -144,13 +195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const file = files[i];
         
         try {
-          // Determine file extension from mimetype
-          let ext = 'jpg';
-          if (file.mimetype === 'image/png') ext = 'png';
-          else if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/jpg') ext = 'jpg';
-          else if (file.mimetype === 'image/webp') ext = 'webp';
-          
-          const fileName = `${report.id}_${i}_${Date.now()}.${ext}`;
+          // Sharp converts all images to JPEG, so always use .jpg extension
+          const fileName = `${report.id}_${i}_${Date.now()}.jpg`;
           
           // Process image with Sharp
           let imageBuffer: Buffer;
@@ -165,11 +211,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             imageBuffer = file.buffer;
           }
 
-          // Upload to object storage
+          // Upload to object storage with correct MIME type for JPEG
           const objectPath = await uploadFile(
             `images/${fileName}`,
             imageBuffer,
-            file.mimetype
+            'image/jpeg'
           );
 
           // Convert to base64 for GPT-5
@@ -177,11 +223,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           imageBase64Array.push(base64);
           imagePaths.push(objectPath);
 
-          // Save image record with object storage path
+          // Save image record with object storage path and correct MIME type
           await storage.createImage({
             reportId: report.id,
             filePath: objectPath,
             fileName,
+            mimeType: 'image/jpeg',
             aiDescription: null,
             imageOrder: i,
           });

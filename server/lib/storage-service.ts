@@ -78,7 +78,8 @@ export async function uploadFile(
     });
 
     console.log(`✅ Uploaded file to object storage: public/${filePath}`);
-    return `/${bucketName}/public/${filePath}`;
+    // Return relative path (public/...) instead of fully-qualified path
+    return `public/${filePath}`;
   } catch (error) {
     console.error(`❌ Failed to upload file ${filePath}:`, error);
     throw error;
@@ -134,4 +135,37 @@ export async function deleteFile(filePath: string): Promise<void> {
     console.error(`❌ Failed to delete file ${filePath}:`, error);
     throw error;
   }
+}
+
+/**
+ * Helper to convert storage paths to public HTTP URLs
+ * Handles both object storage paths and local filesystem paths
+ */
+export function getPublicAssetUrl(baseUrl: string, storagePath: string | null): string {
+  if (!storagePath) {
+    return '';
+  }
+  
+  // If path starts with /, it's a legacy object storage path like "/bucket-id/public/logos/file.png"
+  // Convert to HTTP URL: "https://host/storage/logos/file.png"
+  if (storagePath.startsWith('/')) {
+    const match = storagePath.match(/\/[^\/]+\/public\/(.+)$/);
+    if (match) {
+      return `${baseUrl}/storage/${match[1]}`;
+    }
+  }
+  
+  // If path starts with "public/", it's a new object storage path like "public/images/file.jpg"
+  // Convert to HTTP URL: "https://host/storage/images/file.jpg"
+  if (storagePath.startsWith('public/')) {
+    return `${baseUrl}/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  }
+  
+  // Otherwise it's a local filesystem path like "storage/logos/file.png"
+  // Convert to HTTP URL: "https://host/storage/logos/file.png"
+  if (storagePath.startsWith('storage/')) {
+    return `${baseUrl}/${storagePath}`;
+  }
+  
+  return `${baseUrl}/storage/${storagePath}`;
 }

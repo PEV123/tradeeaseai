@@ -23,7 +23,11 @@ export async function generatePDF(
         }
         
         const base64 = imageBuffer.toString('base64');
-        const mimeType = img.fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        // Use stored mimeType from database, fallback to filename-based detection for legacy data
+        let mimeType = img.mimeType;
+        if (!mimeType) {
+          mimeType = img.fileName.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+        }
         return {
           ...img,
           base64DataUrl: `data:${mimeType};base64,${base64}`

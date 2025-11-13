@@ -42,6 +42,7 @@ export const images = pgTable("images", {
   reportId: varchar("report_id").notNull().references(() => reports.id),
   filePath: varchar("file_path", { length: 500 }).notNull(),
   fileName: varchar("file_name", { length: 255 }).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull().default('image/jpeg'),
   aiDescription: text("ai_description"),
   imageOrder: integer("image_order").notNull(),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
@@ -168,6 +169,7 @@ export const imageSchema = z.object({
   reportId: z.string(),
   filePath: z.string(),
   fileName: z.string(),
+  mimeType: z.string(),
   aiDescription: z.string().nullable(),
   imageOrder: z.number(),
   uploadedAt: z.date(),
@@ -177,6 +179,7 @@ export const insertImageSchema = z.object({
   reportId: z.string(),
   filePath: z.string(),
   fileName: z.string(),
+  mimeType: z.string().default('image/jpeg'),
   imageOrder: z.number(),
 });
 

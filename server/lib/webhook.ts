@@ -2,7 +2,7 @@ import FormData from 'form-data';
 import { promises as fs } from 'fs';
 import axios from 'axios';
 import path from 'path';
-import { downloadFile } from './storage-service';
+import { downloadFile, getPublicAssetUrl } from './storage-service';
 
 const WEBHOOK_URL = 'https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc';
 
@@ -22,15 +22,11 @@ interface WebhookPayload {
 }
 
 async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
-  // Construct TradeEase AI logo URL
-  const tradeaseLogoUrl = `${payload.baseUrl}/storage/logos/tradease-ai-logo.png`;
+  // Construct TradeEase AI logo URL using helper
+  const tradeaseLogoUrl = getPublicAssetUrl(payload.baseUrl, 'storage/logos/tradease-ai-logo.png');
   
-  // Construct client logo URL if it exists
-  let clientLogoUrl = '';
-  if (payload.clientLogoPath) {
-    // Convert storage path to URL: "storage/logos/file.png" -> "https://domain/storage/logos/file.png"
-    clientLogoUrl = `${payload.baseUrl}/${payload.clientLogoPath}`;
-  }
+  // Construct client logo URL if it exists using helper
+  const clientLogoUrl = getPublicAssetUrl(payload.baseUrl, payload.clientLogoPath);
 
   const brandColor = payload.clientBrandColor || '#E8764B';
   const formattedDate = new Date(payload.reportDate).toLocaleDateString('en-US', { 
