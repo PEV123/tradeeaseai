@@ -504,20 +504,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('[PDF Download] PDF path from DB:', report.pdfPath);
-      console.log('[PDF Download] Is absolute:', path.isAbsolute(report.pdfPath));
-      console.log('[PDF Download] process.cwd():', process.cwd());
 
-      // Use pdfPath as-is if it's absolute, otherwise join with cwd
-      const pdfFilePath = path.isAbsolute(report.pdfPath) 
-        ? report.pdfPath 
-        : path.join(process.cwd(), report.pdfPath);
-      
-      console.log('[PDF Download] Final file path:', pdfFilePath);
-      
+      // Download from object storage if path starts with /, otherwise use local filesystem
       try {
-        await fs.access(pdfFilePath);
-        console.log('[PDF Download] File exists, sending download...');
-        res.download(pdfFilePath, `report-${report.id}.pdf`);
+        if (report.pdfPath.startsWith('/')) {
+          console.log('[PDF Download] Loading from object storage...');
+          const pdfBuffer = await downloadFile(report.pdfPath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="report-${report.id}.pdf"`);
+          res.send(pdfBuffer);
+        } else {
+          const pdfFilePath = path.isAbsolute(report.pdfPath) 
+            ? report.pdfPath 
+            : path.join(process.cwd(), report.pdfPath);
+          console.log('[PDF Download] Loading from filesystem:', pdfFilePath);
+          await fs.access(pdfFilePath);
+          res.download(pdfFilePath, `report-${report.id}.pdf`);
+        }
       } catch (error) {
         console.log('[PDF Download] File not accessible:', error);
         return res.status(404).json({ error: "PDF file not found" });
@@ -627,13 +630,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process logo if uploaded
       if (req.file) {
-        const fileName = `${Date.now()}_${req.file.originalname}`;
-        logoPath = path.join('storage', 'logos', fileName);
-
-        await sharp(req.file.buffer)
+        const fileName = `${Date.now()}_${req.file.originalname.replace(/\.[^.]+$/, '.png')}`;
+        
+        // Process image with Sharp and get buffer
+        const logoBuffer = await sharp(req.file.buffer)
           .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
           .png()
-          .toFile(logoPath);
+          .toBuffer();
+        
+        // Upload to object storage
+        logoPath = await uploadFile(`logos/${fileName}`, logoBuffer, 'image/png');
       }
 
       const client = await storage.createClient({
@@ -668,13 +674,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Process new logo if uploaded
       if (req.file) {
-        const fileName = `${Date.now()}_${req.file.originalname}`;
-        logoPath = path.join('storage', 'logos', fileName);
-
-        await sharp(req.file.buffer)
+        const fileName = `${Date.now()}_${req.file.originalname.replace(/\.[^.]+$/, '.png')}`;
+        
+        // Process image with Sharp and get buffer
+        const logoBuffer = await sharp(req.file.buffer)
           .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
           .png()
-          .toFile(logoPath);
+          .toBuffer();
+        
+        // Upload to object storage
+        logoPath = await uploadFile(`logos/${fileName}`, logoBuffer, 'image/png');
       }
 
       const updated = await storage.updateClient(req.params.id, {
@@ -975,7 +984,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "PDF not found" });
       }
 
-      res.download(report.pdfPath, `report-${req.params.id}.pdf`);
+      // Download from object storage if path starts with /, otherwise use local filesystem
+      if (report.pdfPath.startsWith('/')) {
+        const pdfBuffer = await downloadFile(report.pdfPath);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="report-${req.params.id}.pdf"`);
+        res.send(pdfBuffer);
+      } else {
+        res.download(report.pdfPath, `report-${req.params.id}.pdf`);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
