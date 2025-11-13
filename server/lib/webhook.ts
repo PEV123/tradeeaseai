@@ -2,7 +2,7 @@ import FormData from 'form-data';
 import { promises as fs } from 'fs';
 import axios from 'axios';
 import path from 'path';
-import { downloadFile, getPublicAssetUrl } from './storage-service';
+import { downloadFile, getPublicAssetUrl, resolveStoragePaths } from './storage-service';
 
 const WEBHOOK_URL = 'https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc';
 
@@ -220,12 +220,22 @@ export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
 
     const form = new FormData();
     
-    // Add PDF file as attachment - load from object storage if path starts with /
+    // Resolve storage paths using unified helper
     let pdfBuffer: Buffer;
-    if (payload.pdfPath.startsWith('/')) {
-      pdfBuffer = await downloadFile(payload.pdfPath);
+    const paths = resolveStoragePaths(payload.pdfPath);
+    if (paths.objectPath) {
+      try {
+        pdfBuffer = await downloadFile(paths.objectPath);
+      } catch {
+        const fullPath = path.isAbsolute(paths.filesystemPath) 
+          ? paths.filesystemPath 
+          : path.join(process.cwd(), paths.filesystemPath);
+        pdfBuffer = await fs.readFile(fullPath);
+      }
     } else {
-      const fullPath = path.isAbsolute(payload.pdfPath) ? payload.pdfPath : path.join(process.cwd(), payload.pdfPath);
+      const fullPath = path.isAbsolute(paths.filesystemPath) 
+        ? paths.filesystemPath 
+        : path.join(process.cwd(), paths.filesystemPath);
       pdfBuffer = await fs.readFile(fullPath);
     }
     

@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import { type Client } from "@shared/schema";
 import fs from "fs/promises";
 import path from "path";
-import { downloadFile } from "./storage-service";
+import { downloadFile, resolveStoragePaths } from "./storage-service";
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
@@ -21,12 +21,22 @@ export async function sendReportEmail(
   reportDate: Date,
   pdfPath: string
 ): Promise<void> {
-  // Load PDF from object storage if path starts with /, otherwise use local filesystem
+  // Resolve storage paths using unified helper
   let pdfBuffer: Buffer;
-  if (pdfPath.startsWith('/')) {
-    pdfBuffer = await downloadFile(pdfPath);
+  const paths = resolveStoragePaths(pdfPath);
+  if (paths.objectPath) {
+    try {
+      pdfBuffer = await downloadFile(paths.objectPath);
+    } catch {
+      const fullPath = path.isAbsolute(paths.filesystemPath) 
+        ? paths.filesystemPath 
+        : path.join(process.cwd(), paths.filesystemPath);
+      pdfBuffer = await fs.readFile(fullPath);
+    }
   } else {
-    const fullPath = path.isAbsolute(pdfPath) ? pdfPath : path.join(process.cwd(), pdfPath);
+    const fullPath = path.isAbsolute(paths.filesystemPath) 
+      ? paths.filesystemPath 
+      : path.join(process.cwd(), paths.filesystemPath);
     pdfBuffer = await fs.readFile(fullPath);
   }
 

@@ -7,7 +7,7 @@ import { analyzeReport } from "./lib/openai";
 import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
 import { sendToWebhook } from "./lib/webhook";
-import { uploadFile, downloadFile } from "./lib/storage-service";
+import { uploadFile, downloadFile, resolveStoragePaths, getPublicAssetUrl } from "./lib/storage-service";
 import { loginSchema, clientLoginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema, insertClientUserSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
@@ -110,29 +110,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentType = 'image/webp';
       }
       
-      // Try object storage first
-      try {
-        // Check if path already has public/ prefix (new format) or needs it added
-        const objectPath = storagePath.startsWith('public/') 
-          ? `/${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID}/${storagePath}`
-          : `/${process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID}/public/${storagePath}`;
-        const fileBuffer = await downloadFile(objectPath);
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-        res.send(fileBuffer);
-      } catch (objectError) {
-        // Fallback to local filesystem for backwards compatibility
-        const localPath = path.join(process.cwd(), 'storage', storagePath);
+      // Resolve storage paths using unified helper
+      const paths = resolveStoragePaths(storagePath);
+      
+      // Try object storage first (if path provided)
+      if (paths.objectPath) {
         try {
-          await fs.access(localPath);
-          const fileBuffer = await fs.readFile(localPath);
+          const fileBuffer = await downloadFile(paths.objectPath);
           res.setHeader('Content-Type', contentType);
           res.setHeader('Cache-Control', 'public, max-age=31536000');
           res.send(fileBuffer);
-        } catch (fsError) {
-          console.log(`File not found in object storage or filesystem: ${storagePath}`);
-          res.status(404).json({ error: 'File not found' });
+          return;
+        } catch (objectError) {
+          // Fall through to filesystem fallback
         }
+      }
+      
+      // Filesystem fallback
+      const localPath = path.join(process.cwd(), paths.filesystemPath);
+      try {
+        await fs.access(localPath);
+        const fileBuffer = await fs.readFile(localPath);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=31536000');
+        res.send(fileBuffer);
+      } catch (fsError) {
+        console.log(`File not found in object storage or filesystem: ${storagePath}`);
+        res.status(404).json({ error: 'File not found' });
       }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -552,22 +556,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('[PDF Download] PDF path from DB:', report.pdfPath);
 
-      // Download from object storage if path starts with /, otherwise use local filesystem
+      // Download from object storage or local filesystem using unified helper
       try {
-        if (report.pdfPath.startsWith('/')) {
-          console.log('[PDF Download] Loading from object storage...');
-          const pdfBuffer = await downloadFile(report.pdfPath);
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="report-${report.id}.pdf"`);
-          res.send(pdfBuffer);
-        } else {
-          const pdfFilePath = path.isAbsolute(report.pdfPath) 
-            ? report.pdfPath 
-            : path.join(process.cwd(), report.pdfPath);
-          console.log('[PDF Download] Loading from filesystem:', pdfFilePath);
-          await fs.access(pdfFilePath);
-          res.download(pdfFilePath, `report-${report.id}.pdf`);
+        const paths = resolveStoragePaths(report.pdfPath);
+        
+        // Try object storage first
+        if (paths.objectPath) {
+          try {
+            console.log('[PDF Download] Loading from object storage...');
+            const pdfBuffer = await downloadFile(paths.objectPath);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="report-${report.id}.pdf"`);
+            res.send(pdfBuffer);
+            return;
+          } catch (objectError) {
+            // Fall through to filesystem
+          }
         }
+        
+        // Filesystem fallback
+        const pdfFilePath = path.isAbsolute(paths.filesystemPath) 
+          ? paths.filesystemPath 
+          : path.join(process.cwd(), paths.filesystemPath);
+        console.log('[PDF Download] Loading from filesystem:', pdfFilePath);
+        await fs.access(pdfFilePath);
+        res.download(pdfFilePath, `report-${report.id}.pdf`);
       } catch (error) {
         console.log('[PDF Download] File not accessible:', error);
         return res.status(404).json({ error: "PDF file not found" });
@@ -1031,15 +1044,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "PDF not found" });
       }
 
-      // Download from object storage if path starts with /, otherwise use local filesystem
-      if (report.pdfPath.startsWith('/')) {
-        const pdfBuffer = await downloadFile(report.pdfPath);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="report-${req.params.id}.pdf"`);
-        res.send(pdfBuffer);
-      } else {
-        res.download(report.pdfPath, `report-${req.params.id}.pdf`);
+      // Download from object storage or local filesystem using unified helper
+      const paths = resolveStoragePaths(report.pdfPath);
+      
+      // Try object storage first
+      if (paths.objectPath) {
+        try {
+          const pdfBuffer = await downloadFile(paths.objectPath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="report-${req.params.id}.pdf"`);
+          res.send(pdfBuffer);
+          return;
+        } catch (objectError) {
+          // Fall through to filesystem
+        }
       }
+      
+      // Filesystem fallback
+      res.download(paths.filesystemPath, `report-${req.params.id}.pdf`);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

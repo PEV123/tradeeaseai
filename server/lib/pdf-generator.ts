@@ -2,7 +2,7 @@ import puppeteer from "puppeteer";
 import { type Report, type Client, type Image } from "@shared/schema";
 import fs from "fs/promises";
 import path from "path";
-import { downloadFile, uploadFile } from "./storage-service";
+import { downloadFile, uploadFile, resolveStoragePaths } from "./storage-service";
 
 export async function generatePDF(
   report: Report,
@@ -13,12 +13,18 @@ export async function generatePDF(
   const imagesWithBase64 = await Promise.all(
     images.map(async (img) => {
       try {
-        // Load from object storage if path starts with /, otherwise try local filesystem
+        // Resolve storage paths using unified helper
         let imageBuffer: Buffer;
-        if (img.filePath.startsWith('/')) {
-          imageBuffer = await downloadFile(img.filePath);
+        const paths = resolveStoragePaths(img.filePath);
+        if (paths.objectPath) {
+          try {
+            imageBuffer = await downloadFile(paths.objectPath);
+          } catch {
+            const imagePath = path.join(process.cwd(), paths.filesystemPath);
+            imageBuffer = await fs.readFile(imagePath);
+          }
         } else {
-          const imagePath = path.join(process.cwd(), img.filePath);
+          const imagePath = path.join(process.cwd(), paths.filesystemPath);
           imageBuffer = await fs.readFile(imagePath);
         }
         
@@ -43,12 +49,18 @@ export async function generatePDF(
   let logoBase64 = '';
   if (client.logoPath) {
     try {
-      // Load from object storage if path starts with /, otherwise try local filesystem
+      // Resolve storage paths using unified helper
       let logoBuffer: Buffer;
-      if (client.logoPath.startsWith('/')) {
-        logoBuffer = await downloadFile(client.logoPath);
+      const paths = resolveStoragePaths(client.logoPath);
+      if (paths.objectPath) {
+        try {
+          logoBuffer = await downloadFile(paths.objectPath);
+        } catch {
+          const logoPath = path.join(process.cwd(), paths.filesystemPath);
+          logoBuffer = await fs.readFile(logoPath);
+        }
       } else {
-        const logoPath = path.join(process.cwd(), client.logoPath);
+        const logoPath = path.join(process.cwd(), paths.filesystemPath);
         logoBuffer = await fs.readFile(logoPath);
       }
       

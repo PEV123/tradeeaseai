@@ -1,6 +1,7 @@
 // Simple object storage service for storing images, logos, and PDFs
 // Reference: javascript_object_storage blueprint from Replit
 import { Storage, File } from "@google-cloud/storage";
+import { posix } from "path";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
@@ -135,6 +136,100 @@ export async function deleteFile(filePath: string): Promise<void> {
     console.error(`❌ Failed to delete file ${filePath}:`, error);
     throw error;
   }
+}
+
+/**
+ * Normalize storage path to fully-qualified object storage path
+ * Handles legacy, new object storage formats, and gracefully passes through filesystem paths
+ * @param storagePath - Path from database (e.g., "public/images/file.jpg", "/bucket-id/public/images/file.jpg", or "storage/images/file.jpg")
+ * @returns Fully-qualified path for object storage operations or original path for filesystem
+ */
+export function normalizeObjectStoragePath(storagePath: string): string {
+  // Already fully-qualified (legacy object storage format)
+  if (storagePath.startsWith('/')) {
+    return storagePath;
+  }
+  
+  // New object storage format - prepend bucket ID
+  if (storagePath.startsWith('public/')) {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) {
+      // Gracefully passthrough if bucket not configured (dev/local mode)
+      // Caller will treat as filesystem path and fall back to fs.readFile()
+      return storagePath;
+    }
+    return `/${bucketId}/${storagePath}`;
+  }
+  
+  // Local filesystem path (e.g., "storage/images/file.jpg") - passthrough unchanged
+  // Caller should handle filesystem vs object storage logic
+  return storagePath;
+}
+
+/**
+ * Unified path resolution for storage paths
+ * Returns both object storage path (if bucket configured) and filesystem fallback path
+ * 
+ * @param storagePath - Path from database or URL (e.g., "public/images/file.jpg", "/bucket/public/...", "storage/...")
+ * @returns { objectPath?: string; filesystemPath: string }
+ * @throws Error if path contains traversal attempts
+ */
+export function resolveStoragePaths(storagePath: string): { objectPath?: string; filesystemPath: string } {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  
+  // Sanitize and normalize path
+  let sanitized = storagePath.replace(/\\/g, '/');
+  sanitized = posix.normalize(sanitized);
+  
+  // Security: reject path traversal attempts
+  if (sanitized.includes('..') || sanitized.includes('/../')) {
+    throw new Error('Path traversal not allowed');
+  }
+  
+  // Determine object storage path
+  let objectPath: string | undefined;
+  
+  // Always preserve fully-qualified paths (regardless of env var)
+  if (sanitized.startsWith('/')) {
+    objectPath = sanitized;
+  } else if (bucketId) {
+    // Generate object path only when bucket configured
+    if (sanitized.startsWith('public/')) {
+      // New format: "public/..." → "/bucket/public/..."
+      objectPath = `/${bucketId}/${sanitized}`;
+    } else if (!sanitized.startsWith('storage/')) {
+      // URL format: "images/..." → "/bucket/public/images/..."
+      objectPath = `/${bucketId}/public/${sanitized}`;
+    }
+    // If starts with "storage/", no object path (filesystem only)
+  }
+  
+  // Determine filesystem path
+  let filesystemPath: string;
+  if (sanitized.startsWith('storage/')) {
+    // Already filesystem format
+    filesystemPath = sanitized;
+  } else if (sanitized.startsWith('/')) {
+    // Extract from fully-qualified object storage path
+    // Try to match "/bucket/public/..." format
+    const publicMatch = sanitized.match(/\/[^\/]+\/public\/(.+)$/);
+    if (publicMatch) {
+      // "/bucket/public/images/..." → "storage/images/..."
+      filesystemPath = `storage/${publicMatch[1]}`;
+    } else {
+      // Path like "/bucket/foo.pdf" without public/ - extract after first /
+      const pathWithoutBucket = sanitized.substring(sanitized.indexOf('/', 1) + 1);
+      filesystemPath = pathWithoutBucket ? `storage/${pathWithoutBucket}` : 'storage/unknown';
+    }
+  } else if (sanitized.startsWith('public/')) {
+    // Convert: "public/images/..." → "storage/images/..."
+    filesystemPath = 'storage/' + sanitized.substring(7);
+  } else {
+    // URL format: "images/..." → "storage/images/..."
+    filesystemPath = `storage/${sanitized}`;
+  }
+  
+  return { objectPath, filesystemPath };
 }
 
 /**
