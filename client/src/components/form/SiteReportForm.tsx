@@ -84,7 +84,7 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
             <CardTitle>Report Submitted Successfully!</CardTitle>
             <CardDescription>
               Your daily site report has been received and is being processed by our AI system.
-              A PDF report will be generated and emailed to the project managers.
+              A PDF report will be generated and emailed to the team and saved in your client portal.
             </CardDescription>
           </CardHeader>
           <CardContent>
