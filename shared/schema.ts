@@ -123,8 +123,14 @@ export const insertClientSchema = z.object({
   contactName: z.string().min(1, "Contact name is required"),
   contactEmail: z.string().email("Valid email is required"),
   notificationEmails: z.array(z.string().email()).min(1, "At least one notification email is required"),
-  notificationPhoneNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/, "Must be a valid phone number with country code").optional().or(z.literal("")).nullable(),
-  notificationTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Must be in HH:MM format (e.g., 17:00)").optional().or(z.literal("")).nullable(),
+  notificationPhoneNumber: z.string().refine(
+    (val) => !val || /^\+?[1-9]\d{1,14}$/.test(val),
+    { message: "Must be a valid phone number with country code (e.g., +61412345678)" }
+  ).optional(),
+  notificationTime: z.string().refine(
+    (val) => !val || /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val),
+    { message: "Must be in HH:MM format (e.g., 17:00)" }
+  ).optional(),
   logoPath: z.string().nullable().optional(),
   brandColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be a valid hex color").default("#E8764B"),
   formSlug: z.string().min(3, "Form slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
