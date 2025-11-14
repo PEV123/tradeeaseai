@@ -69,8 +69,9 @@ Preferred communication style: Simple, everyday language.
 - **Status**: NOT YET IMPLEMENTED - User dismissed Replit integration setup
 - **Purpose**: Send daily SMS reminders to foreman at specified time with link to report form
 - **Fields Added**: Database includes `notificationPhoneNumber` (varchar, nullable) and `notificationTime` (varchar, nullable) in clients table
+- **Timezone**: All reminder times are in Australian Eastern Time (AEDT/AEST - Sydney/Melbourne timezone)
 - **Next Steps**: User needs to provide Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER) as secrets for manual integration
-- **Implementation Note**: Backend routes and UI already collect phone number and time; only SMS sending logic needs to be added
+- **Implementation Note**: Backend routes and UI already collect phone number and time; only SMS sending logic needs to be added. Must use 'Australia/Sydney' timezone when scheduling SMS reminders.
 
 ### Node.js Libraries
 - **Backend Core**: Express, TypeScript, tsx.

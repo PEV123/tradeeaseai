@@ -326,7 +326,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
                 placeholder="17:00"
               />
               <p className="text-sm text-muted-foreground">
-                Daily reminder time (24-hour format)
+                Daily reminder time (24-hour format, Australian Eastern Time - Sydney/Melbourne)
               </p>
               {form.formState.errors.notificationTime && (
                 <p className="text-sm text-destructive">{form.formState.errors.notificationTime.message}</p>
