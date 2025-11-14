@@ -2,6 +2,8 @@
 // Reference: javascript_object_storage blueprint from Replit
 import { Storage, File } from "@google-cloud/storage";
 import { posix } from "path";
+import { promises as fs } from "fs";
+import path from "path";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
@@ -47,25 +49,83 @@ function parseObjectPath(path: string): {
 }
 
 /**
- * Upload a file buffer to object storage
+ * Sanitize file path to prevent path traversal attacks
+ * @param filePath - User-provided file path
+ * @returns Sanitized path safe for filesystem operations
+ */
+function sanitizeFilePath(filePath: string): string {
+  // Reject absolute paths
+  if (path.isAbsolute(filePath)) {
+    throw new Error("Absolute paths are not allowed");
+  }
+
+  // Normalize the path to resolve ".." and "." segments
+  const normalized = posix.normalize(filePath);
+
+  // Reject any path that still contains ".." after normalization
+  if (normalized.includes("..")) {
+    throw new Error("Path traversal attempts are not allowed");
+  }
+
+  // Reject paths that start with "/" after normalization
+  if (normalized.startsWith("/")) {
+    throw new Error("Absolute paths are not allowed");
+  }
+
+  return normalized;
+}
+
+/**
+ * Upload a file buffer to object storage or filesystem fallback
  * @param filePath - Path relative to bucket (e.g., "images/report-123.jpg")
  * @param buffer - File buffer to upload
  * @param contentType - MIME type (e.g., "image/jpeg")
- * @returns Full path in object storage
+ * @returns Full path in object storage or filesystem
  */
 export async function uploadFile(
   filePath: string,
   buffer: Buffer,
   contentType: string
 ): Promise<string> {
-  try {
-    // Get bucket ID from environment
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) {
-      throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
-    }
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  const isProduction = process.env.NODE_ENV === "production";
 
-    // Parse bucket name from ID (format: replit-objstore-xxxxx)
+  // In production, require object storage (deployed apps have ephemeral filesystems)
+  if (!bucketId && isProduction) {
+    throw new Error(
+      "Object storage is required for production deployments. " +
+      "Please configure DEFAULT_OBJECT_STORAGE_BUCKET_ID environment variable."
+    );
+  }
+
+  // Fall back to filesystem in development only
+  if (!bucketId) {
+    console.log(`⚠️ Object storage not configured, using filesystem fallback for: ${filePath}`);
+    console.log(`⚠️ WARNING: Filesystem storage is for development only. Files will not persist on deployed apps.`);
+    
+    // Sanitize the file path to prevent path traversal attacks
+    const sanitizedPath = sanitizeFilePath(filePath);
+    const storageRoot = path.join(process.cwd(), "storage");
+    const fullPath = path.join(storageRoot, sanitizedPath);
+    
+    // Double-check the final path is still within storage root
+    const relativePath = path.relative(storageRoot, fullPath);
+    if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+      throw new Error("Attempted path traversal detected");
+    }
+    
+    const dir = path.dirname(fullPath);
+    
+    // Ensure directory exists
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(fullPath, buffer);
+    
+    console.log(`✅ Uploaded file to filesystem: storage/${sanitizedPath}`);
+    return `storage/${sanitizedPath}`;
+  }
+
+  // Use object storage
+  try {
     const bucketName = bucketId;
     const bucket = storageClient.bucket(bucketName);
     const file = bucket.file(`public/${filePath}`);
@@ -78,7 +138,6 @@ export async function uploadFile(
     });
 
     console.log(`✅ Uploaded file to object storage: public/${filePath}`);
-    // Return relative path (public/...) instead of fully-qualified path
     return `public/${filePath}`;
   } catch (error) {
     console.error(`❌ Failed to upload file ${filePath}:`, error);

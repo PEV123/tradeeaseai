@@ -1,283 +1,78 @@
 # TradeaseAI - Construction Site Daily Reporting System
 
 ## Overview
-
-TradeaseAI is a construction site daily reporting system that enables construction companies to collect, analyze, and distribute daily site reports. The application features:
-
-- **Admin Dashboard**: Manage multiple construction company clients, each with custom branding
-- **Public Report Forms**: Custom-branded, no-login forms for site workers to submit daily reports
-- **Client Portal**: Secure authentication system allowing clients to view their historical reports
-- **AI-Powered Analysis**: GPT-5 integration to analyze form data and site photos
-- **Automated PDF Generation**: Creates professional PDF reports with embedded images
-- **Email Notifications**: Sends completed reports to designated stakeholders
-
-The system is designed to run entirely on Replit with minimal external dependencies - only the OpenAI API is used as an external service.
+TradeaseAI is a construction site daily reporting system designed to streamline the collection, analysis, and distribution of daily site reports for construction companies. It features an Admin Dashboard for client management and branding, public report forms for workers, a secure Client Portal for historical report access, and AI-powered analysis of form data and site photos using GPT-5. The system automates PDF report generation with embedded images and sends email notifications to stakeholders. The primary goal is to provide a comprehensive, Replit-hosted solution for construction reporting, leveraging AI for efficiency and insights.
 
 ## User Preferences
-
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
+- **Framework**: React with TypeScript and Vite.
+- **UI**: Radix UI primitives with shadcn/ui ("new-york" style), Tailwind CSS, and Inter font.
+- **State Management**: TanStack Query for server state, configured for manual refetching.
+- **Routing**: Wouter for client-side routing, supporting public forms, admin, and client portal routes.
+- **Form Handling**: React Hook Form with Zod for type-safe validation.
+- **Design System**: Custom guidelines, two-column for admin, single-column for public forms.
 
-**Framework**: React with TypeScript and Vite for build tooling
+### Backend
+- **Framework**: Express.js with TypeScript.
+- **Database**: PostgreSQL with Drizzle ORM, using Neon Database for production. Supports Admin, Client, Report, Image, Worker, and Settings models with full CRUD.
+- **Authentication**: JWT-based for Admin (Bearer token, bcryptjs hashing) and secure HTTP-only cookie-based for Client Portal.
+- **File Uploads**: Multer for multipart/form-data, memory storage, 10MB limit, Sharp for image processing.
+- **API**: RESTful endpoints categorized by public, admin, and client portal access.
 
-**UI Component System**: Radix UI primitives with shadcn/ui styling system ("new-york" style variant)
-- Uses Tailwind CSS for styling with custom design tokens
-- Material Design principles adapted for construction industry
-- Inter font family via Google Fonts CDN
-- Component library includes 40+ pre-built components (buttons, forms, cards, dialogs, etc.)
+### Data Storage
+- **Persistence**: Replit Object Storage for deployed apps; local filesystem fallback for development.
+- **Locations**: Cloud bucket (or local `/storage`) for `logos`, `images`, `pdfs`.
+- **Data Models**: Defined with Zod schemas for type-safe validation across client and server.
 
-**State Management**: TanStack Query (React Query) for server state management
-- Custom query client with fetch-based data fetching
-- Configured for no automatic refetching (manual control)
-- Handles authentication errors with 401 status codes
+### AI Integration
+- **OpenAI API**: Uses GPT-5 model (`gpt-5-2025-08-07`) for analyzing form data and images to generate structured reports.
+- **Configuration**: API key from database settings or `OPENAI_API_KEY` env variable.
+- **Output**: JSON containing report metadata, site conditions, workforce details (including individual worker names), works summary, materials, safety, and image analysis.
 
-**Routing**: Wouter for lightweight client-side routing
-- Public routes: `/form/:slug` for custom-branded report submission forms
-- Admin routes: `/admin/*` with subroutes for dashboard, clients, reports, and settings
-- Client portal routes: `/client/login`, `/client/portal`, `/client/reports/:id`
-- Not Found fallback for unmatched routes
+### PDF Generation
+- **Mechanism**: Puppeteer for headless browser-based generation.
+- **Content**: HTML template with client branding, embedded images, A4 format, styled with inline CSS.
 
-**Form Handling**: React Hook Form with Zod schema validation
-- Type-safe form validation using shared schemas
-- Integration with Radix UI form components
+### Email Notifications
+- **Service**: Nodemailer for SMTP.
+- **Content**: HTML template with client branding, report summary, and PDF attachment. Uses URL-based images for smaller payload.
 
-**Design System**: Custom design guidelines documented in `design_guidelines.md`
-- Two-column layout for admin dashboard (fixed sidebar + main content)
-- Single-column centered layout for public forms
-- Document-style layout for report viewing
-- Spacing system based on Tailwind units (4, 6, 8, 12, 16, 24)
-
-### Backend Architecture
-
-**Framework**: Express.js server with TypeScript
-
-**Database**: PostgreSQL with Drizzle ORM (DbStorage class)
-- Production storage using Neon Database (@neondatabase/serverless)
-- Interface-based design (IStorage) allows easy swapping between storage implementations
-- Data models: Admin, Client, Report, Image (all tables created via Drizzle migrations)
-- Full CRUD operations with type-safe queries using Drizzle ORM
-
-**Authentication**: 
-- **Admin Authentication**: JWT-based with Bearer token
-  - bcryptjs for password hashing
-  - JWT tokens with 7-day expiration
-  - Bearer token authentication middleware
-  - Default admin account created on startup (username: "admin", password: "admin123")
-- **Client Portal Authentication**: Secure HTTP-only cookie-based system
-  - Separate client_users table with email and password hash
-  - HTTP-only cookies prevent XSS attacks
-  - Secure flag (production + HTTPS only) prevents MITM
-  - SameSite=lax prevents CSRF attacks
-  - Token type field distinguishes admin vs client tokens
-  - 30-day cookie expiration
-  - cookie-parser middleware for parsing cookies
-
-**File Upload Handling**: Multer for multipart/form-data
-- Memory storage strategy (files stored in memory buffers)
-- 10MB file size limit per upload
-- Sharp library for image processing and optimization
-- Local file storage in `/storage` directory with subdirectories for logos, images, and PDFs
-
-**API Structure**: RESTful endpoints organized by domain
-- Public routes: Form submission endpoints (no authentication)
-- Admin routes: CRUD operations for clients and reports (requires JWT Bearer token)
-- Client portal routes: Authentication and report viewing (requires HTTP-only cookie)
-  - POST /api/client/auth/login - Login with email/password, sets HTTP-only cookie
-  - POST /api/client/auth/logout - Clears authentication cookie
-  - GET /api/client/auth/me - Validate session and get user info
-  - GET /api/client/reports - List reports for authenticated client
-  - GET /api/client/reports/:id - Get specific report (client-scoped)
-  - GET /api/client/reports/:id/pdf - Download PDF (client-scoped)
-- Middleware for token verification on protected routes
-
-### Data Storage Architecture
-
-**Storage Locations**:
-- `/storage/logos` - Client company logos
-- `/storage/images` - Site report photos
-- `/storage/pdfs` - Generated PDF reports
-
-**Data Models**:
-- **Admin**: Basic admin user with username and password hash
-- **Client**: Construction company with branding (logo, color), contact info, notification emails, and unique form slug
-- **ClientUser**: Portal authentication credentials linked to clients (added November 11, 2025)
-  - Email, password hash, active status
-  - One-to-many relationship with clients (multiple portal users per client supported)
-  - Last login timestamp tracking
-  - Admin-managed via client edit page
-- **Report**: Daily site report linked to client, contains form data, AI analysis, and processing status
-- **Image**: Site photos linked to reports with file paths and optional AI-generated captions
-- **Worker**: Individual worker names extracted from AI analysis, linked to reports with ON DELETE CASCADE
-- **Settings**: Key-value storage for application configuration (OpenAI API key, etc.)
-
-**Schema Validation**: Zod schemas in `/shared/schema.ts`
-- Type-safe validation for all data models
-- Shared between client and server for consistency
-- Insert schemas for create operations with proper validation rules
-
-### AI Integration Architecture
-
-**OpenAI API Integration** (`server/lib/openai.ts`):
-- Uses GPT-5 model: `gpt-5-2025-08-07` (released August 7, 2025)
-- API key loaded from database settings table (fallback to OPENAI_API_KEY environment variable)
-- Managed through admin Settings page at `/admin/settings`
-- Uses chat.completions API with vision capabilities for image analysis
-- Analyzes form data and site photos to generate structured report analysis
-- Returns JSON with report metadata, site conditions, workforce details, works summary, materials, safety observations, and image analysis
-- Falls back to mock analysis if no API key configured
-
-**Analysis Output Structure**:
-- Report metadata (project name, date, ID)
-- Site conditions (weather, temperature)
-- Workforce information (total workers, names, hours, man-hours)
-  - Individual worker names are extracted from the `workforce.worker_names` array and saved to the `workers` table
-  - Each worker name is stored separately for detailed tracking and display
-  - Worker names are displayed as badges in the report detail view
-  - Note: Existing reports created before worker tracking was implemented need to be regenerated to populate worker data
-- Works summary (detailed description)
-- Materials tracking
-- Safety observations
-- Image analysis with captions
-
-### PDF Generation Architecture
-
-**PDF Generator** (`server/lib/pdf-generator.ts`):
-- Puppeteer for headless browser-based PDF generation
-- HTML template with client branding (logo, brand color)
-- Embedded images from local file system using `file://` protocol
-- A4 format with custom margins
-- Styled using inline CSS for print compatibility
-
-**Template Features**:
-- Client logo and branding integration
-- Metadata grid (date, project, report ID)
-- Workforce and site condition sections
-- Works performed details
-- Materials and safety observations
-- Image gallery with captions
-
-### Email Notification Architecture
-
-**Email Service** (`server/lib/email.ts`):
-- Nodemailer for SMTP email sending
-- Configurable SMTP settings via environment variables
-- HTML email template with client branding
-- PDF attachment support
-- Sends to multiple notification email addresses per client
-
-**Email Features**:
-- Client brand color header
-- Report metadata summary
-- Professional formatting
-- File attachment (PDF report)
-
-### Webhook Integration Architecture
-
-**Webhook Service** (`server/lib/webhook.ts`):
-- Sends completed reports to n8n webhook for email distribution
-- POST request with multipart/form-data containing PDF + report data
-- Webhook URL: https://tradease.app.n8n.cloud/webhook/0b7c5bc5-bee3-4192-8f73-3c80d9c44fbc
-- Uses axios for reliable FormData handling in Node.js
-
-**Webhook Payload**:
-- `pdf` (file): Generated PDF report attachment
-- `data` (JSON string): Complete report data including:
-  - `reportId`: Report identifier
-  - `clientId`: Client identifier
-  - `clientName`: Company name
-  - `projectName`: Project name
-  - `reportDate`: Report date
-  - `formData`: Complete form submission data
-  - `aiAnalysis`: GPT-5 analysis results
-  - `notificationEmails`: Email recipients list
-  - `emailHtml`: Pre-built HTML email template with image URLs
-
-**Email HTML Template** (November 12, 2025):
-- **URL-based images**: Uses image URLs instead of base64 encoding for smaller payload size
-- **TradeEase AI logo**: Served from `storage/logos/tradease-ai-logo.png` as `${baseUrl}/storage/logos/tradease-ai-logo.png`
-- **Client logo**: Constructed as `${baseUrl}/${logoPath}` (e.g., `https://domain/storage/logos/file.png`)
-- **Client branding**: Uses client brand color throughout design
-- **Comprehensive sections**: Report summary, AI analysis, works performed, labour, materials, safety
-- **Email-compatible**: Table-based layout with inline CSS, 600px width
-- **Base URL**: Automatically extracted from request as `${protocol}://${host}`
-- **Branding**: All user-facing text uses generic "AI" terminology instead of specific model names
-
-**Integration Flow**:
-1. Form submitted → AI analysis → PDF generation
-2. After PDF created and saved, webhook is triggered
-3. Email HTML generated with image URLs (not base64)
-4. PDF + complete JSON data sent to n8n for email distribution
-5. Non-blocking: webhook failures don't affect report completion
-
-### Build and Development Architecture
-
-**Development Mode**:
-- Vite dev server with HMR (Hot Module Replacement)
-- Express server runs concurrently
-- Replit-specific plugins (runtime error modal, cartographer, dev banner)
-
-**Production Build**:
-- Vite builds client to `/dist/public`
-- esbuild bundles server to `/dist`
-- ESM module format throughout
-- Static file serving from Express in production
-
-**TypeScript Configuration**:
-- Strict mode enabled
-- Path aliases: `@/*` for client, `@shared/*` for shared code, `@assets/*` for attached assets
-- ESNext module resolution with bundler strategy
-- Incremental compilation for faster rebuilds
+### Webhook Integration
+- **Purpose**: Sends completed reports to n8n webhook for email distribution.
+- **Payload**: POST request with multipart/form-data including the generated PDF and a JSON string of complete report data (e.g., `reportId`, `clientId`, `aiAnalysis`, `notificationEmails`, `emailHtml`).
 
 ## External Dependencies
 
 ### OpenAI API
-- **Purpose**: AI-powered analysis of daily site reports and photos
-- **Model**: GPT-5 (released August 7, 2025)
-- **Configuration**: Requires `OPENAI_API_KEY` environment variable
-- **Fallback**: Mock analysis generated when API key not configured
-- **Usage**: Analyzes form submissions and images to generate structured JSON reports
+- **Purpose**: AI analysis of daily site reports and photos.
+- **Model**: GPT-5 (released August 7, 2025).
+- **Configuration**: `OPENAI_API_KEY` environment variable or database setting.
 
 ### SMTP Email Service
-- **Purpose**: Send PDF reports to client notification email addresses
-- **Configuration**: Environment variables for SMTP settings
-  - `SMTP_HOST` (default: smtp.gmail.com)
-  - `SMTP_PORT` (default: 587)
-  - `SMTP_USER`
-  - `SMTP_PASS`
-  - `SMTP_FROM` (optional, default: noreply@tradeaseai.com)
-- **Provider-agnostic**: Works with any SMTP service (Gmail, SendGrid, etc.)
+- **Purpose**: Sending PDF reports via email.
+- **Configuration**: Standard SMTP environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`).
 
 ### Database
-- **Current State**: PostgreSQL database fully operational (DbStorage class)
-- **Provider**: Neon Database (@neondatabase/serverless)
-- **ORM**: Drizzle ORM with type-safe queries and schema management
-- **Tables**: admins, clients, reports, images, workers, settings (all with proper foreign key relationships)
-- **Migration**: Completed migration from MemStorage to DbStorage on November 10, 2025
-- **Configuration**: `DATABASE_URL` environment variable in drizzle.config.ts
-- **Schema Management**: `npm run db:push` for schema synchronization
-- **Environment Setup**: Both development and production environments use the same database (configured November 10, 2025)
-  - This ensures data consistency across environments
-  - No separate dev/production databases - all changes affect production data
-  - Benefits: Simplified data management, no sync issues, real-world testing
-  - Consideration: Exercise caution when testing features that modify data
+- **Type**: PostgreSQL.
+- **Provider**: Neon Database (`@neondatabase/serverless`).
+- **ORM**: Drizzle ORM.
+- **Configuration**: `DATABASE_URL` environment variable.
 
 ### CDN Resources
-- **Google Fonts**: Inter font family loaded via CDN in HTML
-- **Purpose**: Typography for UI components across the application
+- **Google Fonts**: Inter font family for UI typography.
 
 ### Node.js Libraries
-- **Core Backend**: Express, TypeScript, tsx (dev runtime)
-- **Authentication**: bcryptjs, jsonwebtoken
-- **File Processing**: multer, sharp
-- **PDF Generation**: puppeteer
-- **Email**: nodemailer
-- **Database**: @neondatabase/serverless (active), drizzle-orm (active), drizzle-kit
-- **Frontend UI**: Radix UI component primitives (20+ packages)
-- **Frontend State**: @tanstack/react-query
-- **Form Handling**: react-hook-form, @hookform/resolvers, zod
-- **Styling**: tailwindcss, class-variance-authority, clsx, tailwind-merge
-- **Build Tools**: vite, esbuild, @vitejs/plugin-react
-- **Replit Integration**: @replit/vite-plugin-runtime-error-modal, @replit/vite-plugin-cartographer, @replit/vite-plugin-dev-banner
+- **Backend Core**: Express, TypeScript, tsx.
+- **Auth**: bcryptjs, jsonwebtoken.
+- **File Processing**: multer, sharp.
+- **PDF**: puppeteer.
+- **Email**: nodemailer.
+- **Database**: @neondatabase/serverless, drizzle-orm, drizzle-kit.
+- **Frontend UI**: Radix UI components, @tanstack/react-query, react-hook-form, zod.
+- **Styling**: tailwindcss, class-variance-authority.
+- **Build Tools**: vite, esbuild.
+- **Replit Integration**: @replit/vite-plugin-runtime-error-modal, @replit/vite-plugin-cartographer, @replit/vite-plugin-dev-banner.

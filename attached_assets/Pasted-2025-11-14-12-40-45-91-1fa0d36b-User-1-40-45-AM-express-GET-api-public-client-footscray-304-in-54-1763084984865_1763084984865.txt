@@ -1,0 +1,129 @@
+2025-11-14 12:40:45.91
+1fa0d36b
+User
+1:40:45 AM [express] GET /api/public/client/footscray 304 in 54ms :: {"id":"9e9417a5-844a-4da8-b8b2-…
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+❌ Failed to upload file images/7194adeb-492d-496f-b8bc-2d32095f570a_0_1763084540521.jpg: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+CRITICAL: Error processing image 0 for report 7194adeb-492d-496f-b8bc-2d32095f570a: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:20.93
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+❌ Failed to upload file images/7194adeb-492d-496f-b8bc-2d32095f570a_1_1763084540938.jpg: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+CRITICAL: Error processing image 1 for report 7194adeb-492d-496f-b8bc-2d32095f570a: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:21.34
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+❌ Failed to upload file images/7194adeb-492d-496f-b8bc-2d32095f570a_2_1763084541345.jpg: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+CRITICAL: Error processing image 2 for report 7194adeb-492d-496f-b8bc-2d32095f570a: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+at file:///home/runner/workspace/dist/index.js:1796:36
+2025-11-14 12:42:21.73
+1fa0d36b
+User
+1:42:21 AM [express] POST /api/reports/submit 200 in 3712ms :: {"success":true,"reportId":"7194adeb-…
+2025-11-14 12:42:24.48
+1fa0d36b
+User
+🤖 Analyzing report with GPT-5 (0 images)...
+2025-11-14 12:43:33.59
+1fa0d36b
+User
+✅ GPT-5 analysis completed successfully
+2025-11-14 12:43:40.68
+1fa0d36b
+User
+Found Chromium using "which chromium": /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-11-14 12:43:40.68
+1fa0d36b
+User
+Launching Chromium from: /nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+❌ Failed to upload file pdfs/7194adeb-492d-496f-b8bc-2d32095f570a.pdf: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at generatePDF (file:///home/runner/workspace/dist/index.js:995:25)
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at async file:///home/runner/workspace/dist/index.js:1848:29
+
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+Error processing report: Error: DEFAULT_OBJECT_STORAGE_BUCKET_ID not set
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at uploadFile (file:///home/runner/workspace/dist/index.js:797:13)
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at generatePDF (file:///home/runner/workspace/dist/index.js:995:25)
+2025-11-14 12:44:44.69
+1fa0d36b
+User
+at async file:///home/runner/workspace/dist/index.js:1848:29
