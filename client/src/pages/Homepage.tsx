@@ -21,11 +21,6 @@ export default function Homepage() {
                   Client Portal
                 </Button>
               </Link>
-              <Link href="/admin">
-                <Button variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white hover:text-orange-600" data-testid="button-admin-login-nav">
-                  Admin Login
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
@@ -67,16 +62,6 @@ export default function Homepage() {
                 >
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/admin">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
-                  className="bg-white/10 backdrop-blur-sm text-white border-white/30 hover:bg-white hover:text-orange-600 text-lg px-8 py-6 h-auto"
-                  data-testid="button-view-portal-hero"
-                >
-                  Admin Login
                 </Button>
               </Link>
             </div>
@@ -258,11 +243,6 @@ export default function Homepage() {
               © 2025 TradeaseAI. Construction Site Daily Reporting System.
             </p>
             <div className="flex gap-4">
-              <Link href="/admin">
-                <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
-                  Admin
-                </Button>
-              </Link>
               <Link href="/client/login">
                 <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
                   Client Portal
