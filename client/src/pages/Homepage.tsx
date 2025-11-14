@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Zap, Mail, Brain, Users, Shield, CheckCircle, ArrowRight } from "lucide-react";
-import logoUrl from "@assets/tradeeaseai-logo_1762856519098.png";
+import logoUrl from "@assets/Trade Ease Logo - black (1)_1763089710627.png";
 import heroBackground from "@assets/generated_images/Construction_site_hero_background_d312695b.png";
 import techBackground from "@assets/generated_images/Technology_workspace_background_56fe0754.png";
 import patternBackground from "@assets/generated_images/Abstract_geometric_pattern_a05969fd.png";
