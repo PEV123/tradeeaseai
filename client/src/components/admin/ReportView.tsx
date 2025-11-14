@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type ReportWithClient, type Worker } from "@shared/schema";
+import { type ReportWithClient, type Worker, type ImageResponse } from "@shared/schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2, Users } from "lucide-react";
 import { format } from "date-fns";
 
+type ReportForView = Omit<ReportWithClient, 'images'> & {
+  images: ImageResponse[];
+};
+
 interface ReportViewProps {
-  report: ReportWithClient;
+  report: ReportForView;
   workers?: Worker[];
   onDownloadPdf?: () => void;
   onRegenerate?: () => void;

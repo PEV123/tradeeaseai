@@ -286,5 +286,5 @@ export type ClientWithReportCount = Client & {
 
 export type ReportWithClient = Report & {
   client: Client;
-  images: ImageResponse[];
+  images: Image[];
 };

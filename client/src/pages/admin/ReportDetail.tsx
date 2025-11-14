@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { type ReportWithClient, type Worker } from "@shared/schema";
+import { type ReportWithClient, type Worker, type ImageResponse } from "@shared/schema";
 import ReportView from "@/components/admin/ReportView";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,23 @@ export default function ReportDetail() {
     enabled: !!params?.id,
   });
 
+  const { data: images } = useQuery<ImageResponse[]>({
+    queryKey: ["/api/reports", params?.id, "images"],
+    enabled: !!params?.id,
+  });
+
   const { data: workers } = useQuery<Worker[]>({
     queryKey: [`/api/reports/${params?.id}/workers`],
     enabled: !!params?.id,
   });
+
+  const reportForView = useMemo(() => {
+    if (!report) return null;
+    return {
+      ...report,
+      images: images || []
+    };
+  }, [report, images]);
 
   const regenerateMutation = useMutation({
     mutationFn: async () => {
@@ -28,6 +42,7 @@ export default function ReportDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/reports/${params?.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/reports", params?.id, "images"] });
       queryClient.invalidateQueries({ queryKey: [`/api/reports/${params?.id}/workers`] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/reports"] });
       toast({
@@ -90,7 +105,7 @@ export default function ReportDetail() {
     );
   }
 
-  if (!report) {
+  if (!report || !reportForView) {
     return (
       <div className="text-center py-16">
         <p className="text-muted-foreground">Report not found</p>
@@ -112,7 +127,7 @@ export default function ReportDetail() {
       </div>
 
       <ReportView 
-        report={report}
+        report={reportForView}
         workers={workers || []}
         onDownloadPdf={handleDownloadPdf}
         onRegenerate={() => regenerateMutation.mutate()}

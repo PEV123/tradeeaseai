@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               clientId: client.id,
               clientName: client.companyName,
               projectName: validated.projectName,
-              reportDate: validated.reportDate,
+              reportDate: typeof validated.reportDate === 'string' ? validated.reportDate : validated.reportDate.toISOString(),
               formData: validated,
               aiAnalysis,
               pdfPath,
@@ -868,6 +868,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updated = await storage.updateClientUser(clientUser.id, updates);
+      
+      if (!updated) {
+        return res.status(500).json({ error: "Failed to update user" });
+      }
 
       res.json({
         success: true,
