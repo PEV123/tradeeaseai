@@ -32,6 +32,8 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
       notificationEmails: client?.notificationEmails && client.notificationEmails.length > 0 
         ? client.notificationEmails 
         : [""],
+      notificationPhoneNumber: client?.notificationPhoneNumber || "",
+      notificationTime: client?.notificationTime || "",
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
       active: client?.active ?? true,
@@ -283,6 +285,54 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
             <Plus className="h-4 w-4 mr-2" />
             Add Email Address
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>SMS Reminder Notifications (Optional)</CardTitle>
+          <CardDescription>
+            Send daily SMS reminders to foreman to complete the daily report
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="notificationPhoneNumber">Phone Number</Label>
+              <Input
+                id="notificationPhoneNumber"
+                data-testid="input-notification-phone"
+                type="tel"
+                {...form.register("notificationPhoneNumber")}
+                disabled={isLoading}
+                placeholder="+61412345678"
+              />
+              <p className="text-sm text-muted-foreground">
+                Include country code (e.g., +61 for Australia)
+              </p>
+              {form.formState.errors.notificationPhoneNumber && (
+                <p className="text-sm text-destructive">{form.formState.errors.notificationPhoneNumber.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notificationTime">Reminder Time</Label>
+              <Input
+                id="notificationTime"
+                data-testid="input-notification-time"
+                type="time"
+                {...form.register("notificationTime")}
+                disabled={isLoading}
+                placeholder="17:00"
+              />
+              <p className="text-sm text-muted-foreground">
+                Daily reminder time (24-hour format)
+              </p>
+              {form.formState.errors.notificationTime && (
+                <p className="text-sm text-destructive">{form.formState.errors.notificationTime.message}</p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
