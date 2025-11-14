@@ -65,6 +65,13 @@ Preferred communication style: Simple, everyday language.
 ### CDN Resources
 - **Google Fonts**: Inter font family for UI typography.
 
+### Twilio SMS (Future Implementation)
+- **Status**: NOT YET IMPLEMENTED - User dismissed Replit integration setup
+- **Purpose**: Send daily SMS reminders to foreman at specified time with link to report form
+- **Fields Added**: Database includes `notificationPhoneNumber` (varchar, nullable) and `notificationTime` (varchar, nullable) in clients table
+- **Next Steps**: User needs to provide Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER) as secrets for manual integration
+- **Implementation Note**: Backend routes and UI already collect phone number and time; only SMS sending logic needs to be added
+
 ### Node.js Libraries
 - **Backend Core**: Express, TypeScript, tsx.
 - **Auth**: bcryptjs, jsonwebtoken.
