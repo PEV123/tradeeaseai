@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowLeft, Calendar, Download, Loader2, Users, CheckCircle2, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { type ImageResponse } from "@shared/schema";
 
 interface Report {
   id: string;
@@ -25,12 +26,6 @@ interface Worker {
   id: string;
   workerName: string;
   hoursWorked: number | null;
-}
-
-interface Image {
-  id: string;
-  filePath: string;
-  aiDescription: string | null;
 }
 
 export default function ClientReportDetail() {
@@ -65,7 +60,7 @@ export default function ClientReportDetail() {
     enabled: !!id,
   });
 
-  const { data: images } = useQuery<Image[]>({
+  const { data: images } = useQuery<ImageResponse[]>({
     queryKey: ["/api/client/reports", id, "images"],
     queryFn: async () => {
       const response = await fetch(`/api/client/reports/${id}/images`, {
@@ -372,13 +367,13 @@ export default function ClientReportDetail() {
                     key={image.id} 
                     className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover-elevate active-elevate-2"
                     onClick={() => setSelectedImage({ 
-                      src: `/${image.filePath}`, 
+                      src: image.url, 
                       description: image.aiDescription || "Site photo" 
                     })}
                     data-testid={`button-view-image-${image.id}`}
                   >
                     <img
-                      src={`/${image.filePath}`}
+                      src={image.url}
                       alt={image.aiDescription || "Site photo"}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       data-testid={`img-site-photo-${image.id}`}

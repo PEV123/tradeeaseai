@@ -1,0 +1,164 @@
+2025-11-14 13:14:10.66
+0cf09302
+User
+},
+2025-11-14 13:14:10.66
+0cf09302
+User
+_readableState: ReadableState {
+2025-11-14 13:14:10.66
+0cf09302
+User
+highWaterMark: 16384,
+2025-11-14 13:14:10.66
+0cf09302
+User
+buffer: [],
+2025-11-14 13:14:10.66
+0cf09302
+User
+bufferIndex: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+length: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+pipes: [],
+2025-11-14 13:14:10.66
+0cf09302
+User
+awaitDrainWriters: null,
+2025-11-14 13:14:10.66
+0cf09302
+User
+[Symbol(kState)]: 110659452
+2025-11-14 13:14:10.66
+0cf09302
+User
+},
+2025-11-14 13:14:10.66
+0cf09302
+User
+_writableState: WritableState {
+2025-11-14 13:14:10.66
+0cf09302
+User
+highWaterMark: 16384,
+2025-11-14 13:14:10.66
+0cf09302
+User
+length: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+corked: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+onwrite: [Function: bound onwrite],
+2025-11-14 13:14:10.66
+0cf09302
+User
+writelen: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+bufferedIndex: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+pendingcb: 0,
+2025-11-14 13:14:10.66
+0cf09302
+User
+[Symbol(kState)]: 1091466620,
+2025-11-14 13:14:10.66
+0cf09302
+User
+[Symbol(kBufferedValue)]: null,
+2025-11-14 13:14:10.66
+0cf09302
+User
+[Symbol(kWriteCbValue)]: null
+2025-11-14 13:14:10.66
+0cf09302
+User
+},
+2025-11-14 13:14:10.66
+0cf09302
+User
+allowHalfOpen: true,
+2025-11-14 13:14:10.66
+0cf09302
+User
+_maxListeners: undefined,
+2025-11-14 13:14:10.66
+0cf09302
+User
+_eventsCount: 6,
+2025-11-14 13:14:10.66
+0cf09302
+User
+statusCode: 404,
+2025-11-14 13:14:10.66
+0cf09302
+User
+statusMessage: 'Not Found',
+2025-11-14 13:14:10.66
+0cf09302
+User
+request: {
+2025-11-14 13:14:10.66
+0cf09302
+User
+agent: [Agent],
+2025-11-14 13:14:10.66
+0cf09302
+User
+headers: [Object],
+2025-11-14 13:14:10.66
+0cf09302
+User
+href: 'https://storage.googleapis.com/storage/v1/b/replit-objstore-059160fc-5717-472d-8f07-a7b59b0658cf/o/public%2Flogos%2F1762906006759_footscray-constructions.png?alt=media'
+2025-11-14 13:14:10.66
+0cf09302
+User
+body: [Circular *1],
+2025-11-14 13:14:10.66
+0cf09302
+User
+headers: {
+2025-11-14 13:14:10.66
+0cf09302
+User
+'cache-control': 'private, max-age=0',
+2025-11-14 13:14:10.66
+0cf09302
+User
+'content-length': '123',
+2025-11-14 13:14:10.66
+0cf09302
+User
+'content-type': 'text/html; charset=UTF-8',
+2025-11-14 13:14:10.66
+0cf09302
+User
+date: 'Fri, 14 Nov 2025 02:14:10 GMT',
+2025-11-14 13:14:40.46
+0cf09302
+User
+2:14:40 AM [express] GET /api/reports/38ff358d-6275-4b50-8ec9-42d3932ee271/workers 304 in 460ms :: […
+
+2025-11-14 13:14:40.66
+0cf09302
+User
+2:14:40 AM [express] GET /api/reports/38ff358d-6275-4b50-8ec9-42d3932ee271 200 in 657ms :: {"id":"38…
+
+Collapse
+
+Wrap
+
+Colors
+

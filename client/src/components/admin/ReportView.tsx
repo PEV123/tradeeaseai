@@ -305,13 +305,13 @@ export default function ReportView({ report, workers = [], onDownloadPdf, onRege
                   key={image.id} 
                   className="group relative aspect-square rounded-lg overflow-hidden bg-muted cursor-pointer hover-elevate active-elevate-2"
                   onClick={() => setSelectedImage({ 
-                    src: `/${image.filePath}`, 
+                    src: image.url, 
                     description: image.aiDescription || image.fileName 
                   })}
                   data-testid={`button-view-image-${image.id}`}
                 >
                   <img
-                    src={`/${image.filePath}`}
+                    src={image.url}
                     alt={image.aiDescription || image.fileName}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     data-testid={`img-site-photo-${image.id}`}

@@ -189,6 +189,13 @@ export const insertImageSchema = z.object({
 export type Image = z.infer<typeof imageSchema>;
 export type InsertImage = z.infer<typeof insertImageSchema>;
 
+// API Response Schema: Image with computed URL field
+export const imageResponseSchema = imageSchema.extend({
+  url: z.string().url(),
+});
+
+export type ImageResponse = z.infer<typeof imageResponseSchema>;
+
 // Settings Schema
 export const settingsSchema = z.object({
   id: z.string(),
@@ -279,5 +286,5 @@ export type ClientWithReportCount = Client & {
 
 export type ReportWithClient = Report & {
   client: Client;
-  images: Image[];
+  images: ImageResponse[];
 };

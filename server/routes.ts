@@ -502,7 +502,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const images = await storage.getImagesByReport(req.params.id);
-      res.json(images);
+      
+      // Convert filePath to HTTP URL for frontend access
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const imagesWithUrls = images.map(img => ({
+        ...img,
+        url: getPublicAssetUrl(baseUrl, img.filePath)
+      }));
+      
+      res.json(imagesWithUrls);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -917,7 +925,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/:id/images", requireAuth, async (req: Request, res: Response) => {
     try {
       const images = await storage.getImagesByReport(req.params.id);
-      res.json(images);
+      
+      // Convert filePath to HTTP URL for frontend access
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const imagesWithUrls = images.map(img => ({
+        ...img,
+        url: getPublicAssetUrl(baseUrl, img.filePath)
+      }));
+      
+      res.json(imagesWithUrls);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
