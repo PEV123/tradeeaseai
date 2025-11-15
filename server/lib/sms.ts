@@ -1,4 +1,12 @@
 import twilio from 'twilio';
+import { storage } from '../storage';
+
+export const DEFAULT_SMS_TEMPLATE = `Daily Site Report Reminder for {companyName}
+
+Please submit today's site report:
+{formUrl}
+
+- Trade Ease AI`;
 
 export interface SMSConfig {
   accountSid: string;
@@ -35,7 +43,16 @@ export class SMSService {
     const baseUrl = this.getBaseUrl();
     const formUrl = `${baseUrl}/form/${formSlug}`;
     
-    const message = `Daily Site Report Reminder for ${companyName}\n\nPlease submit today's site report:\n${formUrl}\n\n- Trade Ease AI`;
+    // Get custom SMS template from settings, or use default
+    let template = await storage.getSetting('sms_template');
+    if (!template) {
+      template = DEFAULT_SMS_TEMPLATE;
+    }
+    
+    // Replace template variables
+    const message = template
+      .replace(/\{companyName\}/g, companyName)
+      .replace(/\{formUrl\}/g, formUrl);
     
     return this.sendSMS(phoneNumber, message);
   }

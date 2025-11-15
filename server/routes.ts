@@ -1121,14 +1121,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Don't expose raw API keys - only return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
       const aiPrompt = await storage.getSetting('ai_prompt');
+      const smsTemplate = await storage.getSetting('sms_template');
       
-      // Include default prompt so UI can show it
+      // Include default templates so UI can show them
       const { DEFAULT_AI_PROMPT } = await import("./lib/openai");
+      const { DEFAULT_SMS_TEMPLATE } = await import("./lib/sms");
       
       res.json({ 
         openai_api_key: hasApiKey ? '***configured***' : null,
         ai_prompt: aiPrompt,
-        default_ai_prompt: DEFAULT_AI_PROMPT
+        default_ai_prompt: DEFAULT_AI_PROMPT,
+        sms_template: smsTemplate,
+        default_sms_template: DEFAULT_SMS_TEMPLATE
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1157,13 +1161,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Save the AI prompt (allow empty to reset to default)
         await storage.setSetting('ai_prompt', validated.aiPrompt || null);
       }
+
+      if (validated.smsTemplate !== undefined) {
+        // Save the SMS template (allow empty to reset to default)
+        await storage.setSetting('sms_template', validated.smsTemplate || null);
+      }
       
       // Don't expose the raw API key in response - just return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
       const aiPrompt = await storage.getSetting('ai_prompt');
+      const smsTemplate = await storage.getSetting('sms_template');
       res.json({ 
         openai_api_key: hasApiKey ? '***configured***' : null,
-        ai_prompt: aiPrompt 
+        ai_prompt: aiPrompt,
+        sms_template: smsTemplate
       });
     } catch (error: any) {
       // Handle Zod validation errors
