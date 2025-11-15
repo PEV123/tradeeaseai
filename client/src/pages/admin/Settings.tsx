@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Key, FileText, MessageSquare } from "lucide-react";
+import { Loader2, Save, Key, FileText, MessageSquare, Send } from "lucide-react";
+import type { Client } from "@shared/schema";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -15,9 +17,15 @@ export default function Settings() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [smsTemplate, setSmsTemplate] = useState("");
+  const [testClientId, setTestClientId] = useState("");
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
 
   const { data: settings, isLoading } = useQuery<Record<string, string | null>>({
     queryKey: ["/api/admin/settings"],
+  });
+
+  const { data: clients } = useQuery<Client[]>({
+    queryKey: ["/api/admin/clients"],
   });
 
   // Load settings when available, or use defaults
@@ -71,6 +79,47 @@ export default function Settings() {
   const handleSmsTemplateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettingsMutation.mutate({ smsTemplate });
+  };
+
+  const testSmsMutation = useMutation({
+    mutationFn: async (data: { clientId: string; phoneNumber: string }) => {
+      return await apiRequest("POST", "/api/admin/test-sms", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Test SMS sent",
+        description: "Check your phone for the test message",
+      });
+      setTestPhoneNumber("");
+    },
+    onError: (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send test SMS",
+      });
+    },
+  });
+
+  const handleTestSms = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testClientId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please select a client",
+      });
+      return;
+    }
+    if (!testPhoneNumber.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Please enter a phone number",
+      });
+      return;
+    }
+    testSmsMutation.mutate({ clientId: testClientId, phoneNumber: testPhoneNumber });
   };
 
   const hasApiKey = settings?.openai_api_key === '***configured***';
@@ -348,6 +397,72 @@ export default function Settings() {
                   Reset to Default
                 </Button>
               )}
+            </div>
+
+            <div className="rounded-lg border bg-muted/50 p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-primary" />
+                <h3 className="font-medium">Test SMS Reminder</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Send a test message to verify how your SMS template looks
+              </p>
+              <form onSubmit={handleTestSms} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="testClient">Select Client</Label>
+                  <Select
+                    value={testClientId}
+                    onValueChange={setTestClientId}
+                    disabled={testSmsMutation.isPending}
+                  >
+                    <SelectTrigger id="testClient" data-testid="select-test-client">
+                      <SelectValue placeholder="Choose a client..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clients?.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.companyName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="testPhone">Test Phone Number</Label>
+                  <Input
+                    id="testPhone"
+                    data-testid="input-test-phone"
+                    type="tel"
+                    value={testPhoneNumber}
+                    onChange={(e) => setTestPhoneNumber(e.target.value)}
+                    placeholder="+61457002098"
+                    disabled={testSmsMutation.isPending}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Include country code (e.g., +61 for Australia)
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={testSmsMutation.isPending || !testClientId || !testPhoneNumber.trim()}
+                  data-testid="button-send-test-sms"
+                  variant="secondary"
+                >
+                  {testSmsMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Test SMS
+                    </>
+                  )}
+                </Button>
+              </form>
             </div>
           </form>
         </CardContent>
