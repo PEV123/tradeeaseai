@@ -97,3 +97,26 @@ export function createSMSService(): SMSService | null {
     phoneNumber
   });
 }
+
+// Helper function to send a daily reminder (for test SMS and scheduler)
+export async function sendDailyReminder(client: { formSlug: string; companyName: string; notificationPhoneNumber?: string | null }, phoneNumber?: string): Promise<void> {
+  const smsService = createSMSService();
+  if (!smsService) {
+    throw new Error('SMS service not configured. Please check Twilio credentials.');
+  }
+
+  const targetPhone = phoneNumber || client.notificationPhoneNumber;
+  if (!targetPhone) {
+    throw new Error('No phone number provided');
+  }
+
+  const success = await smsService.sendDailyReminder(
+    targetPhone,
+    client.formSlug,
+    client.companyName
+  );
+
+  if (!success) {
+    throw new Error('Failed to send SMS');
+  }
+}

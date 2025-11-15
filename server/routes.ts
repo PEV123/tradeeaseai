@@ -8,6 +8,7 @@ import { generatePDF } from "./lib/pdf-generator";
 import { sendReportEmail } from "./lib/email";
 import { sendToWebhook } from "./lib/webhook";
 import { uploadFile, downloadFile, resolveStoragePaths, getPublicAssetUrl } from "./lib/storage-service";
+import { sendDailyReminder } from "./lib/sms";
 import { loginSchema, clientLoginSchema, insertClientSchema, insertReportSchema, updateSettingsSchema, insertClientUserSchema } from "@shared/schema";
 import multer from "multer";
 import sharp from "sharp";
@@ -1182,6 +1183,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid settings data", details: error.errors });
       }
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send test SMS
+  app.post("/api/admin/test-sms", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { clientId, phoneNumber } = req.body;
+
+      if (!clientId || !phoneNumber) {
+        return res.status(400).json({ error: "Client ID and phone number are required" });
+      }
+
+      // Validate phone number format (basic check)
+      if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) {
+        return res.status(400).json({ 
+          error: "Invalid phone number format. Must include country code (e.g., +61457002098)" 
+        });
+      }
+
+      // Get client details
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ error: "Client not found" });
+      }
+
+      // Send the test SMS using the same function as the scheduler
+      await sendDailyReminder(client, phoneNumber);
+
+      res.json({ success: true, message: "Test SMS sent successfully" });
+    } catch (error: any) {
+      console.error("Error sending test SMS:", error);
+      res.status(500).json({ error: error.message || "Failed to send test SMS" });
     }
   });
 
