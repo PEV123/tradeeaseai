@@ -3,6 +3,8 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { initializeBrandAssets } from "./lib/asset-initializer";
+import { createSMSService } from "./lib/sms";
+import { createReminderScheduler } from "./lib/reminder-scheduler";
 
 const app = express();
 
@@ -51,6 +53,12 @@ app.use((req, res, next) => {
 
 (async () => {
   await initializeBrandAssets();
+  
+  // Initialize SMS service and reminder scheduler
+  const smsService = createSMSService();
+  const reminderScheduler = createReminderScheduler(smsService);
+  reminderScheduler.start();
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
