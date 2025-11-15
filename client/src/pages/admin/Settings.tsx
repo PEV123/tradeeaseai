@@ -398,73 +398,73 @@ export default function Settings() {
                 </Button>
               )}
             </div>
-
-            <div className="rounded-lg border bg-muted/50 p-6 space-y-4">
-              <div className="flex items-center gap-2">
-                <Send className="h-5 w-5 text-primary" />
-                <h3 className="font-medium">Test SMS Reminder</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Send a test message to verify how your SMS template looks
-              </p>
-              <form onSubmit={handleTestSms} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="testClient">Select Client</Label>
-                  <Select
-                    value={testClientId}
-                    onValueChange={setTestClientId}
-                    disabled={testSmsMutation.isPending}
-                  >
-                    <SelectTrigger id="testClient" data-testid="select-test-client">
-                      <SelectValue placeholder="Choose a client..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients?.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.companyName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="testPhone">Test Phone Number</Label>
-                  <Input
-                    id="testPhone"
-                    data-testid="input-test-phone"
-                    type="tel"
-                    value={testPhoneNumber}
-                    onChange={(e) => setTestPhoneNumber(e.target.value)}
-                    placeholder="+61457002098"
-                    disabled={testSmsMutation.isPending}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Include country code (e.g., +61 for Australia)
-                  </p>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={testSmsMutation.isPending || !testClientId || !testPhoneNumber.trim()}
-                  data-testid="button-send-test-sms"
-                  variant="secondary"
-                >
-                  {testSmsMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Test SMS
-                    </>
-                  )}
-                </Button>
-              </form>
-            </div>
           </form>
+
+          <div className="rounded-lg border bg-muted/50 p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              <h3 className="font-medium">Test SMS Reminder</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Send a test message to verify how your SMS template looks
+            </p>
+            <form onSubmit={handleTestSms} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="testClient">Select Client</Label>
+                <Select
+                  value={testClientId}
+                  onValueChange={setTestClientId}
+                  disabled={testSmsMutation.isPending}
+                >
+                  <SelectTrigger id="testClient" data-testid="select-test-client">
+                    <SelectValue placeholder="Choose a client..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients?.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.companyName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="testPhone">Test Phone Number</Label>
+                <Input
+                  id="testPhone"
+                  data-testid="input-test-phone"
+                  type="tel"
+                  value={testPhoneNumber}
+                  onChange={(e) => setTestPhoneNumber(e.target.value)}
+                  placeholder="+61457002098"
+                  disabled={testSmsMutation.isPending}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include country code (e.g., +61 for Australia)
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={testSmsMutation.isPending || !testClientId || !testPhoneNumber.trim()}
+                data-testid="button-send-test-sms"
+                variant="secondary"
+              >
+                {testSmsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Test SMS
+                  </>
+                )}
+              </Button>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>
