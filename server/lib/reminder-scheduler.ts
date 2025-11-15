@@ -76,11 +76,13 @@ export class ReminderScheduler {
         }
 
         // Check if today is in the selected notification days
-        // If notificationDays is null/empty, send every day (backward compatible)
-        if (client.notificationDays && client.notificationDays.length > 0) {
-          if (!client.notificationDays.includes(currentDay)) {
-            continue; // Skip this client - not a notification day
-          }
+        // If notificationDays is null/empty, don't send reminders
+        if (!client.notificationDays || client.notificationDays.length === 0) {
+          continue; // Skip this client - no notification days configured
+        }
+        
+        if (!client.notificationDays.includes(currentDay)) {
+          continue; // Skip this client - not a notification day
         }
 
         // Check if it's time to send the reminder

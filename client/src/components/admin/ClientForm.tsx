@@ -35,7 +35,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
         : [""],
       notificationPhoneNumber: client?.notificationPhoneNumber || "",
       notificationTime: client?.notificationTime || "",
-      notificationDays: client?.notificationDays as any || [],
+      notificationDays: client?.notificationDays as any || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
       active: client?.active ?? true,
@@ -381,7 +381,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
               })}
             </div>
             <p className="text-sm text-muted-foreground">
-              If no days are selected, reminders will be sent every day
+              If no days are selected, no reminders will be sent
             </p>
           </div>
         </CardContent>
