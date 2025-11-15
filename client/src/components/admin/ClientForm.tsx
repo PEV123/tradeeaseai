@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Upload, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 
@@ -34,6 +35,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
         : [""],
       notificationPhoneNumber: client?.notificationPhoneNumber || "",
       notificationTime: client?.notificationTime || "",
+      notificationDays: client?.notificationDays || [],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
       active: client?.active ?? true,
@@ -332,6 +334,55 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
                 <p className="text-sm text-destructive">{form.formState.errors.notificationTime.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Send Reminders On</Label>
+            <p className="text-sm text-muted-foreground">
+              Select which days of the week to send SMS reminders
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { value: 'monday', label: 'Monday' },
+                { value: 'tuesday', label: 'Tuesday' },
+                { value: 'wednesday', label: 'Wednesday' },
+                { value: 'thursday', label: 'Thursday' },
+                { value: 'friday', label: 'Friday' },
+                { value: 'saturday', label: 'Saturday' },
+                { value: 'sunday', label: 'Sunday' }
+              ].map((day) => {
+                const currentDays = form.watch('notificationDays') || [];
+                const isChecked = currentDays.includes(day.value);
+                
+                return (
+                  <div key={day.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`day-${day.value}`}
+                      data-testid={`checkbox-${day.value}`}
+                      checked={isChecked}
+                      disabled={isLoading}
+                      onCheckedChange={(checked) => {
+                        const current = form.getValues('notificationDays') || [];
+                        if (checked) {
+                          form.setValue('notificationDays', [...current, day.value]);
+                        } else {
+                          form.setValue('notificationDays', current.filter(d => d !== day.value));
+                        }
+                      }}
+                    />
+                    <Label
+                      htmlFor={`day-${day.value}`}
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      {day.label}
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              If no days are selected, reminders will be sent every day
+            </p>
           </div>
         </CardContent>
       </Card>
