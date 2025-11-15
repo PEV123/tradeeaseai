@@ -65,13 +65,19 @@ Preferred communication style: Simple, everyday language.
 ### CDN Resources
 - **Google Fonts**: Inter font family for UI typography.
 
-### Twilio SMS (Future Implementation)
-- **Status**: NOT YET IMPLEMENTED - User dismissed Replit integration setup
+### Twilio SMS
+- **Status**: FULLY IMPLEMENTED - Manual integration with standard environment variables
 - **Purpose**: Send daily SMS reminders to foreman at specified time with link to report form
-- **Fields Added**: Database includes `notificationPhoneNumber` (varchar, nullable) and `notificationTime` (varchar, nullable) in clients table
+- **Configuration**: Uses standard Twilio environment variables (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`)
+- **Database Fields**: `notificationPhoneNumber` (varchar, nullable) and `notificationTime` (varchar, nullable, HH:MM format) in clients table
 - **Timezone**: All reminder times are in Australian Eastern Time (AEDT/AEST - Sydney/Melbourne timezone)
-- **Next Steps**: User needs to provide Twilio credentials (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER) as secrets for manual integration
-- **Implementation Note**: Backend routes and UI already collect phone number and time; only SMS sending logic needs to be added. Must use 'Australia/Sydney' timezone when scheduling SMS reminders.
+- **Architecture**: 
+  - `server/lib/sms.ts`: Twilio SMS service for sending messages
+  - `server/lib/reminder-scheduler.ts`: Cron-based scheduler running every minute in Australia/Sydney timezone
+  - Scheduler checks all active clients and sends reminders at their specified time
+  - Deduplication: Tracks sent reminders per client per day
+  - Automatic reset: Sent tracking resets at midnight AEST
+- **Portability**: Uses standard environment variables, fully portable to any hosting provider (Vercel, AWS, etc.)
 
 ### Node.js Libraries
 - **Backend Core**: Express, TypeScript, tsx.
@@ -79,6 +85,7 @@ Preferred communication style: Simple, everyday language.
 - **File Processing**: multer, sharp.
 - **PDF**: puppeteer.
 - **Email**: nodemailer.
+- **SMS**: twilio, node-cron.
 - **Database**: @neondatabase/serverless, drizzle-orm, drizzle-kit.
 - **Frontend UI**: Radix UI components, @tanstack/react-query, react-hook-form, zod.
 - **Styling**: tailwindcss, class-variance-authority.
