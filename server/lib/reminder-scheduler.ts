@@ -60,6 +60,12 @@ export class ReminderScheduler {
         hour12: false
       }).format(now);
 
+      // Get current day of week in AEST (lowercase)
+      const currentDay = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Australia/Sydney',
+        weekday: 'long'
+      }).format(now).toLowerCase();
+
       // Find all active clients
       const allClients = await storage.getAllClients();
 
@@ -69,13 +75,21 @@ export class ReminderScheduler {
           continue;
         }
 
+        // Check if today is in the selected notification days
+        // If notificationDays is null/empty, send every day (backward compatible)
+        if (client.notificationDays && client.notificationDays.length > 0) {
+          if (!client.notificationDays.includes(currentDay)) {
+            continue; // Skip this client - not a notification day
+          }
+        }
+
         // Check if it's time to send the reminder
         if (client.notificationTime === aestTime) {
           const reminderKey = `${client.id}-${this.getToday()}`;
           
           // Check if we've already sent a reminder today
           if (!this.sentToday.has(reminderKey)) {
-            console.log(`Sending SMS reminder to ${client.companyName} at ${aestTime} AEST`);
+            console.log(`Sending SMS reminder to ${client.companyName} at ${aestTime} AEST on ${currentDay}`);
             
             const success = await this.smsService!.sendDailyReminder(
               client.notificationPhoneNumber,

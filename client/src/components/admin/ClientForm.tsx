@@ -35,7 +35,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
         : [""],
       notificationPhoneNumber: client?.notificationPhoneNumber || "",
       notificationTime: client?.notificationTime || "",
-      notificationDays: client?.notificationDays || [],
+      notificationDays: client?.notificationDays as any || [],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
       active: client?.active ?? true,
@@ -342,15 +342,15 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
               Select which days of the week to send SMS reminders
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {[
-                { value: 'monday', label: 'Monday' },
-                { value: 'tuesday', label: 'Tuesday' },
-                { value: 'wednesday', label: 'Wednesday' },
-                { value: 'thursday', label: 'Thursday' },
-                { value: 'friday', label: 'Friday' },
-                { value: 'saturday', label: 'Saturday' },
-                { value: 'sunday', label: 'Sunday' }
-              ].map((day) => {
+              {([
+                { value: 'monday' as const, label: 'Monday' },
+                { value: 'tuesday' as const, label: 'Tuesday' },
+                { value: 'wednesday' as const, label: 'Wednesday' },
+                { value: 'thursday' as const, label: 'Thursday' },
+                { value: 'friday' as const, label: 'Friday' },
+                { value: 'saturday' as const, label: 'Saturday' },
+                { value: 'sunday' as const, label: 'Sunday' }
+              ]).map((day) => {
                 const currentDays = form.watch('notificationDays') || [];
                 const isChecked = currentDays.includes(day.value);
                 
@@ -364,9 +364,9 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
                       onCheckedChange={(checked) => {
                         const current = form.getValues('notificationDays') || [];
                         if (checked) {
-                          form.setValue('notificationDays', [...current, day.value]);
+                          form.setValue('notificationDays', [...current, day.value] as any);
                         } else {
-                          form.setValue('notificationDays', current.filter(d => d !== day.value));
+                          form.setValue('notificationDays', current.filter(d => d !== day.value) as any);
                         }
                       }}
                     />
