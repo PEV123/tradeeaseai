@@ -151,6 +151,9 @@ function App() {
           </Route>
           
           {/* Admin Routes */}
+          <Route path="/admin/login">
+            {() => <ProtectedRoute component={Clients} />}
+          </Route>
           <Route path="/admin/dashboard">
             {() => <ProtectedRoute component={Dashboard} />}
           </Route>

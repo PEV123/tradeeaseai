@@ -10,6 +10,10 @@ export default function Clients() {
     queryKey: ["/api/admin/clients"],
   });
 
+  const sortedClients = [...clients].sort((a, b) => 
+    a.companyName.localeCompare(b.companyName)
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -32,7 +36,7 @@ export default function Clients() {
           ))}
         </div>
       ) : (
-        <ClientList clients={clients} />
+        <ClientList clients={sortedClients} />
       )}
     </div>
   );
