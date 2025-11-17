@@ -34,7 +34,7 @@ export default function Settings() {
   // Load settings when available, or use defaults
   useEffect(() => {
     if (settings) {
-      setAiPrompt(settings.ai_prompt || "");
+      setAiPrompt(settings.ai_prompt || settings.default_ai_prompt || "");
       setSmsTemplate(settings.sms_template || settings.default_sms_template || "");
       setEmailSubject(settings.email_subject || "");
       setEmailHeaderText(settings.email_header_text || "");
