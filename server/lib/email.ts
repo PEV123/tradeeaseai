@@ -54,8 +54,6 @@ export async function sendReportEmail(
     return normalized;
   }
 
-  // Use Trade Ease AI logo from object storage (persistent public URL)
-  // Logo is uploaded to public/assets/tradeease-logo.png and accessible at /storage/assets/tradeease-logo.png
   // Determine base URL: use PUBLIC_BASE_URL, REPLIT_DOMAINS, or fall back to dev domain
   let baseUrl: string;
   if (process.env.PUBLIC_BASE_URL) {
@@ -74,7 +72,22 @@ export async function sendReportEmail(
     // Development fallback
     baseUrl = 'http://localhost:5000';
   }
-  const logoUrl = `${baseUrl}/storage/assets/tradeease-logo.png`;
+
+  // Use client's custom logo if available, otherwise use Trade Ease AI default logo
+  let logoUrl: string;
+  if (client.logoPath) {
+    // Convert storage path to public URL
+    if (client.logoPath.startsWith('public/')) {
+      logoUrl = `${baseUrl}/storage/${client.logoPath.substring(7)}`;
+    } else if (client.logoPath.startsWith('storage/')) {
+      logoUrl = `${baseUrl}/${client.logoPath}`;
+    } else {
+      logoUrl = `${baseUrl}/storage/${client.logoPath}`;
+    }
+  } else {
+    // Fallback to Trade Ease AI logo
+    logoUrl = `${baseUrl}/storage/assets/tradeease-logo.png`;
+  }
 
   // Sanitize brand color to prevent CSS injection (must be valid hex color)
   const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
@@ -92,7 +105,7 @@ export async function sendReportEmail(
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: ${safeBrandColor}; padding: 20px; text-align: center;">
-          <img src="${logoUrl}" alt="Trade Ease AI" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
+          <img src="${logoUrl}" alt="${client.companyName}" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
           <h1 style="color: white; margin: 0;">Daily Report</h1>
         </div>
         

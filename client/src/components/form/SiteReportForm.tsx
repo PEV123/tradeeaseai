@@ -11,6 +11,20 @@ import { Building2, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import ImageUpload from "./ImageUpload";
 import logoUrl from "@assets/tradeaseai-logo_1762739159026.png";
 
+// Helper function to convert storage paths to public URLs
+function getStorageUrl(storagePath: string): string {
+  // If path starts with "public/", convert to "/storage/" route
+  if (storagePath.startsWith('public/')) {
+    return `/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  }
+  // If path starts with "storage/", use as-is with leading slash
+  if (storagePath.startsWith('storage/')) {
+    return `/${storagePath}`;
+  }
+  // Otherwise, assume it's a relative path and prepend slash
+  return `/${storagePath}`;
+}
+
 interface SiteReportFormProps {
   client: Client;
 }
@@ -109,7 +123,7 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
         <div className="text-center mb-12">
           {client.logoPath ? (
             <img
-              src={`/${client.logoPath}`}
+              src={getStorageUrl(client.logoPath)}
               alt={client.companyName}
               className="h-16 mx-auto mb-4"
             />
