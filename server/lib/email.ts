@@ -73,20 +73,20 @@ export async function sendReportEmail(
     baseUrl = 'http://localhost:5000';
   }
 
-  // Use client's custom logo if available, otherwise use Trade Ease AI default logo
-  let logoUrl: string;
+  // Trade Ease AI logo (always shown at top)
+  const tradeaseLogoUrl = `${baseUrl}/storage/assets/tradeease-logo.png`;
+  
+  // Client logo (shown below Trade Ease AI logo if exists)
+  let clientLogoUrl: string | null = null;
   if (client.logoPath) {
     // Convert storage path to public URL
     if (client.logoPath.startsWith('public/')) {
-      logoUrl = `${baseUrl}/storage/${client.logoPath.substring(7)}`;
+      clientLogoUrl = `${baseUrl}/storage/${client.logoPath.substring(7)}`;
     } else if (client.logoPath.startsWith('storage/')) {
-      logoUrl = `${baseUrl}/${client.logoPath}`;
+      clientLogoUrl = `${baseUrl}/${client.logoPath}`;
     } else {
-      logoUrl = `${baseUrl}/storage/${client.logoPath}`;
+      clientLogoUrl = `${baseUrl}/storage/${client.logoPath}`;
     }
-  } else {
-    // Fallback to Trade Ease AI logo
-    logoUrl = `${baseUrl}/storage/assets/tradeease-logo.png`;
   }
 
   // Sanitize brand color to prevent CSS injection (must be valid hex color)
@@ -104,10 +104,18 @@ export async function sendReportEmail(
     subject: `${emailSubject} - ${projectName} - ${reportDate.toLocaleDateString()}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <!-- Trade Ease AI Logo Header -->
         <div style="background-color: ${safeBrandColor}; padding: 20px; text-align: center;">
-          <img src="${logoUrl}" alt="${client.companyName}" style="max-width: 300px; height: auto; margin-bottom: 10px;" />
-          <h1 style="color: white; margin: 0;">Daily Report</h1>
+          <img src="${tradeaseLogoUrl}" alt="Trade Ease AI" style="max-width: 200px; height: auto; margin-bottom: 10px;" />
+          <h1 style="color: white; margin: 0;">Daily Site Report</h1>
         </div>
+        
+        <!-- Client Logo Section -->
+        ${clientLogoUrl ? `
+        <div style="padding: 20px; text-align: center; background-color: #fafafa; border-bottom: 1px solid #e0e0e0;">
+          <img src="${clientLogoUrl}" alt="${client.companyName}" style="max-width: 150px; max-height: 80px; object-fit: contain;" />
+        </div>
+        ` : ''}
         
         <div style="padding: 20px; background-color: #f5f5f5;">
           <h2 style="color: #333; margin-top: 0;">${projectName}</h2>
