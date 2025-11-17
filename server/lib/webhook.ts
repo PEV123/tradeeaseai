@@ -22,11 +22,18 @@ interface WebhookPayload {
 }
 
 async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
+  // Import storage to fetch email template settings
+  const { storage } = await import("../storage");
+  
+  // Load email template settings from database
+  const emailHeaderText = await storage.getSetting('email_header_text') || 'A new daily site report has been generated and analyzed by TradeEase AI';
+  const emailFooterText = await storage.getSetting('email_footer_text') || 'This report was automatically generated and sent by TradeaseAI.';
+  
   // Construct TradeEase AI logo URL using helper
-  const tradeaseLogoUrl = getPublicAssetUrl(payload.baseUrl, 'storage/logos/tradease-ai-logo.png');
+  const tradeaseLogoUrl = getPublicAssetUrl(payload.baseUrl, 'storage/assets/tradeease-logo.png');
   
   // Construct client logo URL if it exists using helper
-  const clientLogoUrl = getPublicAssetUrl(payload.baseUrl, payload.clientLogoPath);
+  const clientLogoUrl = getPublicAssetUrl(payload.baseUrl, payload.clientLogoPath || null);
 
   const brandColor = payload.clientBrandColor || '#E8764B';
   const formattedDate = new Date(payload.reportDate).toLocaleDateString('en-US', { 
@@ -107,7 +114,7 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
             <td style="padding: 30px 20px;">
               <h2 style="color: #333; margin: 0 0 20px 0; font-size: 24px;">${payload.projectName}</h2>
               <p style="color: #666; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                A new daily site report has been generated and analyzed by TradeEase AI for ${formattedDate}.
+                ${emailHeaderText} for ${formattedDate}.
               </p>
 
               <!-- Report Details Card -->
@@ -192,7 +199,7 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
           <tr>
             <td style="background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
               <p style="margin: 0 0 10px 0; color: #999; font-size: 12px;">
-                This report was automatically generated and analyzed by <strong>TradeEase AI</strong>
+                ${emailFooterText}
               </p>
               <p style="margin: 0; color: #999; font-size: 12px;">
                 © ${new Date().getFullYear()} TradeEase AI
@@ -214,6 +221,11 @@ async function generateEmailHtml(payload: WebhookPayload): Promise<string> {
 export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
   try {
     console.log(`[Webhook] Sending report ${payload.reportId} to n8n webhook...`);
+
+    // Load email subject template setting
+    const { storage } = await import("../storage");
+    const emailSubjectTemplate = await storage.getSetting('email_subject') || 'Daily Site Report';
+    const emailSubject = `${emailSubjectTemplate} - ${payload.projectName} - ${new Date(payload.reportDate).toLocaleDateString()}`;
 
     // Generate email HTML with image URLs
     const emailHtml = await generateEmailHtml(payload);
@@ -254,6 +266,7 @@ export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
       formData: payload.formData,
       aiAnalysis: payload.aiAnalysis,
       notificationEmails: payload.notificationEmails,
+      emailSubject: emailSubject,
       emailHtml: emailHtml,
     };
 

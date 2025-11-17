@@ -21,6 +21,8 @@ export async function sendReportEmail(
   reportDate: Date,
   pdfPath: string
 ): Promise<void> {
+  // Import storage to fetch email template settings
+  const { storage } = await import("../storage");
   // Resolve storage paths using unified helper
   let pdfBuffer: Buffer;
   const paths = resolveStoragePaths(pdfPath);
@@ -78,10 +80,15 @@ export async function sendReportEmail(
   const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
   const safeBrandColor = hexColorRegex.test(client.brandColor) ? client.brandColor : '#E8764B';
 
+  // Load email template settings from database
+  const emailSubject = await storage.getSetting('email_subject') || 'Daily Site Report';
+  const emailHeaderText = await storage.getSetting('email_header_text') || 'A new daily site report has been generated';
+  const emailFooterText = await storage.getSetting('email_footer_text') || 'This report was automatically generated and sent by TradeaseAI.';
+
   const mailOptions = {
     from: process.env.SMTP_FROM || "noreply@tradeaseai.com",
     to: client.notificationEmails.join(", "),
-    subject: `Daily Site Report - ${projectName} - ${reportDate.toLocaleDateString()}`,
+    subject: `${emailSubject} - ${projectName} - ${reportDate.toLocaleDateString()}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background-color: ${safeBrandColor}; padding: 20px; text-align: center;">
@@ -92,7 +99,7 @@ export async function sendReportEmail(
         <div style="padding: 20px; background-color: #f5f5f5;">
           <h2 style="color: #333; margin-top: 0;">${projectName}</h2>
           <p style="color: #666; font-size: 16px;">
-            A new daily site report has been generated for ${reportDate.toLocaleDateString()}.
+            ${emailHeaderText} for ${reportDate.toLocaleDateString()}.
           </p>
           
           <div style="background-color: white; padding: 15px; border-radius: 8px; margin: 20px 0;">
@@ -108,7 +115,7 @@ export async function sendReportEmail(
           </p>
           
           <p style="color: #999; font-size: 14px; margin-top: 30px;">
-            This report was automatically generated and sent by TradeaseAI.
+            ${emailFooterText}
           </p>
         </div>
       </div>

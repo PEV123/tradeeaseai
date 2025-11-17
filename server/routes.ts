@@ -1125,6 +1125,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
       const aiPrompt = await storage.getSetting('ai_prompt');
       const smsTemplate = await storage.getSetting('sms_template');
+      const emailSubject = await storage.getSetting('email_subject');
+      const emailHeaderText = await storage.getSetting('email_header_text');
+      const emailFooterText = await storage.getSetting('email_footer_text');
       
       // Include default templates so UI can show them
       const { DEFAULT_AI_PROMPT } = await import("./lib/openai");
@@ -1135,7 +1138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ai_prompt: aiPrompt,
         default_ai_prompt: DEFAULT_AI_PROMPT,
         sms_template: smsTemplate,
-        default_sms_template: DEFAULT_SMS_TEMPLATE
+        default_sms_template: DEFAULT_SMS_TEMPLATE,
+        email_subject: emailSubject,
+        email_header_text: emailHeaderText,
+        email_footer_text: emailFooterText
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1169,15 +1175,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Save the SMS template (allow empty to reset to default)
         await storage.setSetting('sms_template', validated.smsTemplate || null);
       }
+
+      if (validated.emailSubject !== undefined) {
+        // Save the email subject (allow empty to reset to default)
+        await storage.setSetting('email_subject', validated.emailSubject || null);
+      }
+
+      if (validated.emailHeaderText !== undefined) {
+        // Save the email header text (allow empty to reset to default)
+        await storage.setSetting('email_header_text', validated.emailHeaderText || null);
+      }
+
+      if (validated.emailFooterText !== undefined) {
+        // Save the email footer text (allow empty to reset to default)
+        await storage.setSetting('email_footer_text', validated.emailFooterText || null);
+      }
       
       // Don't expose the raw API key in response - just return status
       const hasApiKey = Boolean(await storage.getSetting('openai_api_key'));
       const aiPrompt = await storage.getSetting('ai_prompt');
       const smsTemplate = await storage.getSetting('sms_template');
+      const emailSubject = await storage.getSetting('email_subject');
+      const emailHeaderText = await storage.getSetting('email_header_text');
+      const emailFooterText = await storage.getSetting('email_footer_text');
       res.json({ 
         openai_api_key: hasApiKey ? '***configured***' : null,
         ai_prompt: aiPrompt,
-        sms_template: smsTemplate
+        sms_template: smsTemplate,
+        email_subject: emailSubject,
+        email_header_text: emailHeaderText,
+        email_footer_text: emailFooterText
       });
     } catch (error: any) {
       // Handle Zod validation errors

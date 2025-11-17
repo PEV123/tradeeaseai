@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Key, FileText, MessageSquare, Send } from "lucide-react";
+import { Loader2, Save, Key, FileText, MessageSquare, Send, Mail } from "lucide-react";
 import type { Client } from "@shared/schema";
 
 export default function Settings() {
@@ -17,6 +17,9 @@ export default function Settings() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [smsTemplate, setSmsTemplate] = useState("");
+  const [emailSubject, setEmailSubject] = useState("");
+  const [emailHeaderText, setEmailHeaderText] = useState("");
+  const [emailFooterText, setEmailFooterText] = useState("");
   const [testClientId, setTestClientId] = useState("");
   const [testPhoneNumber, setTestPhoneNumber] = useState("");
 
@@ -33,11 +36,21 @@ export default function Settings() {
     if (settings) {
       setAiPrompt(settings.ai_prompt || settings.default_ai_prompt || "");
       setSmsTemplate(settings.sms_template || settings.default_sms_template || "");
+      setEmailSubject(settings.email_subject || "");
+      setEmailHeaderText(settings.email_header_text || "");
+      setEmailFooterText(settings.email_footer_text || "");
     }
   }, [settings]);
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (data: { openaiApiKey?: string; aiPrompt?: string; smsTemplate?: string }) => {
+    mutationFn: async (data: { 
+      openaiApiKey?: string; 
+      aiPrompt?: string; 
+      smsTemplate?: string;
+      emailSubject?: string;
+      emailHeaderText?: string;
+      emailFooterText?: string;
+    }) => {
       return await apiRequest("PUT", "/api/admin/settings", data);
     },
     onSuccess: () => {
@@ -79,6 +92,15 @@ export default function Settings() {
   const handleSmsTemplateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettingsMutation.mutate({ smsTemplate });
+  };
+
+  const handleEmailTemplateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate({ 
+      emailSubject, 
+      emailHeaderText,
+      emailFooterText 
+    });
   };
 
   const testSmsMutation = useMutation({
@@ -465,6 +487,117 @@ export default function Settings() {
               </Button>
             </form>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Mail className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>Email Template Settings</CardTitle>
+              <CardDescription>
+                Customize the email template sent with daily site reports
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleEmailTemplateSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="emailSubject">Email Subject Prefix</Label>
+              <Input
+                id="emailSubject"
+                data-testid="input-email-subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Daily Site Report"
+                disabled={updateSettingsMutation.isPending}
+              />
+              <p className="text-sm text-muted-foreground">
+                Custom text added to email subject line (e.g., "Daily Site Report - Project Name - Date")
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="emailHeaderText">Email Header Text</Label>
+              <Textarea
+                id="emailHeaderText"
+                data-testid="input-email-header"
+                value={emailHeaderText}
+                onChange={(e) => setEmailHeaderText(e.target.value)}
+                placeholder="A new daily site report has been generated..."
+                rows={3}
+                disabled={updateSettingsMutation.isPending}
+              />
+              <p className="text-sm text-muted-foreground">
+                Introduction text displayed at the top of the email body
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="emailFooterText">Email Footer Text</Label>
+              <Textarea
+                id="emailFooterText"
+                data-testid="input-email-footer"
+                value={emailFooterText}
+                onChange={(e) => setEmailFooterText(e.target.value)}
+                placeholder="This report was automatically generated by TradeaseAI."
+                rows={2}
+                disabled={updateSettingsMutation.isPending}
+              />
+              <p className="text-sm text-muted-foreground">
+                Footer text displayed at the bottom of the email
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <p className="text-sm font-medium">Email Template Tips</p>
+              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                <li>Leave fields empty to use default values</li>
+                <li>Changes apply to all new report emails</li>
+                <li>The Trade Ease AI logo will always appear in the email header</li>
+                <li>Client branding (logo and color) is automatically included</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={updateSettingsMutation.isPending}
+                data-testid="button-save-email-template"
+              >
+                {updateSettingsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Template
+                  </>
+                )}
+              </Button>
+              {(emailSubject || emailHeaderText || emailFooterText) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEmailSubject("");
+                    setEmailHeaderText("");
+                    setEmailFooterText("");
+                  }}
+                  disabled={updateSettingsMutation.isPending}
+                  data-testid="button-reset-email-template"
+                >
+                  Reset to Default
+                </Button>
+              )}
+            </div>
+          </form>
         </CardContent>
       </Card>
     </div>
