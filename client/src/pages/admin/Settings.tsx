@@ -15,6 +15,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
   const [smsTemplate, setSmsTemplate] = useState("");
   const [emailSubject, setEmailSubject] = useState("");
   const [emailHeaderText, setEmailHeaderText] = useState("");
@@ -33,6 +34,7 @@ export default function Settings() {
   // Load settings when available, or use defaults
   useEffect(() => {
     if (settings) {
+      setAiPrompt(settings.ai_prompt || "");
       setSmsTemplate(settings.sms_template || settings.default_sms_template || "");
       setEmailSubject(settings.email_subject || "");
       setEmailHeaderText(settings.email_header_text || "");
@@ -42,7 +44,8 @@ export default function Settings() {
 
   const updateSettingsMutation = useMutation({
     mutationFn: async (data: { 
-      openaiApiKey?: string; 
+      openaiApiKey?: string;
+      aiPrompt?: string;
       smsTemplate?: string;
       emailSubject?: string;
       emailHeaderText?: string;
@@ -79,6 +82,11 @@ export default function Settings() {
       return;
     }
     updateSettingsMutation.mutate({ openaiApiKey: apiKey });
+  };
+
+  const handlePromptSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateSettingsMutation.mutate({ aiPrompt });
   };
 
   const handleSmsTemplateSubmit = (e: React.FormEvent) => {
@@ -248,6 +256,92 @@ export default function Settings() {
                 </>
               )}
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>AI Analysis Prompt</CardTitle>
+              <CardDescription>
+                Customize the AI prompt template used for analyzing site reports and images
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handlePromptSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="aiPrompt">AI Prompt Template</Label>
+              <Textarea
+                id="aiPrompt"
+                data-testid="input-ai-prompt"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="Leave empty to use the default prompt..."
+                rows={20}
+                className="font-mono text-sm"
+                disabled={updateSettingsMutation.isPending}
+              />
+              <p className="text-sm text-muted-foreground">
+                Use template variables: <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;reportDate&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;projectName&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;worksPerformed&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;labourOnSite&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;plantMachinery&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;hoursWorked&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;materialsUsed&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;delaysWeather&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;safetyIncidents&#125;&#125;</code>,{" "}
+                <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;imageCount&#125;&#125;</code>
+              </p>
+            </div>
+
+            <div className="rounded-lg border bg-card p-4 space-y-3">
+              <p className="text-sm font-medium">Prompt Tips</p>
+              <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+                <li>Template variables will be replaced with actual values from the report form</li>
+                <li>Ensure the prompt requests JSON output for proper parsing</li>
+                <li>Leave blank to use the default construction industry prompt</li>
+                <li>Changes apply to all new reports and regenerated reports</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={updateSettingsMutation.isPending}
+                data-testid="button-save-prompt"
+              >
+                {updateSettingsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save Prompt
+                  </>
+                )}
+              </Button>
+              {aiPrompt && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAiPrompt("")}
+                  disabled={updateSettingsMutation.isPending}
+                  data-testid="button-reset-prompt"
+                >
+                  Reset to Default
+                </Button>
+              )}
+            </div>
           </form>
         </CardContent>
       </Card>

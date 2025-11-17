@@ -425,7 +425,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
               data-testid="input-ai-prompt-template"
               {...form.register("aiPromptTemplate")}
               placeholder="Leave empty to use the default prompt..."
-              rows={15}
+              rows={20}
               className="font-mono text-sm"
               disabled={isLoading}
             />
