@@ -1,5 +1,6 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
 import { insertClientSchema, type InsertClient, type Client } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Upload, Loader2, FileText } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 // Helper function to convert storage paths to public URLs
 function getStorageUrl(storagePath: string): string {
@@ -39,6 +40,14 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch global settings to get default AI prompt
+  const { data: settings } = useQuery<Record<string, string | null>>({
+    queryKey: ["/api/admin/settings"],
+  });
+
+  // Determine the effective AI prompt: client-specific > global > default
+  const effectiveAiPrompt = client?.aiPromptTemplate || settings?.ai_prompt || settings?.default_ai_prompt || "";
+
   const form = useForm<InsertClient>({
     resolver: zodResolver(insertClientSchema),
     defaultValues: {
@@ -53,7 +62,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
       notificationDays: client?.notificationDays as any || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
-      aiPromptTemplate: client?.aiPromptTemplate || "",
+      aiPromptTemplate: effectiveAiPrompt,
       active: client?.active ?? true,
     },
   });
@@ -62,6 +71,14 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
     control: form.control,
     name: "notificationEmails",
   });
+
+  // Update aiPromptTemplate when settings load
+  useEffect(() => {
+    if (settings && !client?.aiPromptTemplate) {
+      const newEffectivePrompt = settings.ai_prompt || settings.default_ai_prompt || "";
+      form.setValue("aiPromptTemplate", newEffectivePrompt);
+    }
+  }, [settings, client?.aiPromptTemplate, form]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
