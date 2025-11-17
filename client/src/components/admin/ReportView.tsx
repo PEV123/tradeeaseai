@@ -7,6 +7,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Download, Calendar, Building2, FileText, CheckCircle2, AlertTriangle, RefreshCw, Loader2, Users } from "lucide-react";
 import { format } from "date-fns";
 
+// Helper function to convert storage paths to public URLs
+function getStorageUrl(storagePath: string): string {
+  // If path starts with "public/", convert to "/storage/" route
+  if (storagePath.startsWith('public/')) {
+    return `/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  }
+  // If path starts with "storage/", use as-is with leading slash
+  if (storagePath.startsWith('storage/')) {
+    return `/${storagePath}`;
+  }
+  // Otherwise, assume it's a relative path and prepend slash
+  return `/${storagePath}`;
+}
+
 type ReportForView = Omit<ReportWithClient, 'images'> & {
   images: ImageResponse[];
 };
@@ -30,7 +44,7 @@ export default function ReportView({ report, workers = [], onDownloadPdf, onRege
         <div className="space-y-1 flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             {client.logoPath ? (
-              <img src={`/${client.logoPath}`} alt={client.companyName} className="h-12 object-contain" />
+              <img src={getStorageUrl(client.logoPath)} alt={client.companyName} className="h-12 object-contain" />
             ) : (
               <div
                 className="h-12 w-12 rounded-md flex items-center justify-center"

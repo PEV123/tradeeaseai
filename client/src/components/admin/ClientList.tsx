@@ -4,6 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Edit, FileText, Link as LinkIcon, Trash2 } from "lucide-react";
+
+// Helper function to convert storage paths to public URLs
+function getStorageUrl(storagePath: string): string {
+  // If path starts with "public/", convert to "/storage/" route
+  if (storagePath.startsWith('public/')) {
+    return `/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  }
+  // If path starts with "storage/", use as-is with leading slash
+  if (storagePath.startsWith('storage/')) {
+    return `/${storagePath}`;
+  }
+  // Otherwise, assume it's a relative path and prepend slash
+  return `/${storagePath}`;
+}
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,7 +85,7 @@ export default function ClientList({ clients }: ClientListProps) {
               <div className="flex-1 min-w-0">
                 {client.logoPath ? (
                   <img 
-                    src={`/${client.logoPath}`} 
+                    src={getStorageUrl(client.logoPath)} 
                     alt={`${client.companyName} logo`}
                     className="h-12 object-contain mb-3"
                   />

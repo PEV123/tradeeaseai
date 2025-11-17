@@ -10,6 +10,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Upload, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 
+// Helper function to convert storage paths to public URLs
+function getStorageUrl(storagePath: string): string {
+  // If path starts with "public/", convert to "/storage/" route
+  if (storagePath.startsWith('public/')) {
+    return `/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  }
+  // If path starts with "storage/", use as-is with leading slash
+  if (storagePath.startsWith('storage/')) {
+    return `/${storagePath}`;
+  }
+  // Otherwise, assume it's a relative path and prepend slash
+  return `/${storagePath}`;
+}
+
 interface ClientFormProps {
   client?: Client;
   onSubmit: (data: InsertClient, logoFile?: File) => Promise<void>;
@@ -20,7 +34,7 @@ interface ClientFormProps {
 export default function ClientForm({ client, onSubmit, onCancel, isLoading = false }: ClientFormProps) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(
-    client?.logoPath ? `/${client.logoPath}` : null
+    client?.logoPath ? getStorageUrl(client.logoPath) : null
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
