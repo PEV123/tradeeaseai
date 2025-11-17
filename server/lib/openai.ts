@@ -103,7 +103,7 @@ async function getOpenAIClient(): Promise<OpenAI | null> {
   return null;
 }
 
-export async function analyzeReport(formData: any, imageBase64Array: string[]) {
+export async function analyzeReport(formData: any, imageBase64Array: string[], clientId: string) {
   // Get OpenAI client with API key from database or environment
   const openai = await getOpenAIClient();
   
@@ -115,22 +115,33 @@ export async function analyzeReport(formData: any, imageBase64Array: string[]) {
 
   // Try with images first, fallback to text-only if images fail
   try {
-    return await analyzeWithImages(openai, formData, imageBase64Array);
+    return await analyzeWithImages(openai, formData, imageBase64Array, clientId);
   } catch (error: any) {
     console.error("❌ GPT-5 analysis failed:", error);
     // If image parsing fails, retry without images
     if (error?.message?.includes('image') || error?.status === 400) {
       console.warn("⚠️ Image processing failed, retrying without images:", error.message);
-      return await analyzeWithImages(openai, formData, []);
+      return await analyzeWithImages(openai, formData, [], clientId);
     }
     throw error;
   }
 }
 
-async function analyzeWithImages(openai: OpenAI, formData: any, imageBase64Array: string[]) {
-  // Get custom AI prompt from settings, fallback to default
-  const customPrompt = await storage.getSetting('ai_prompt');
-  const promptTemplate = customPrompt || DEFAULT_AI_PROMPT;
+async function analyzeWithImages(openai: OpenAI, formData: any, imageBase64Array: string[], clientId: string) {
+  // Get client-specific AI prompt template, fallback to global setting, then default
+  const client = await storage.getClient(clientId);
+  let promptTemplate = DEFAULT_AI_PROMPT;
+  
+  if (client?.aiPromptTemplate) {
+    // Use client-specific prompt
+    promptTemplate = client.aiPromptTemplate;
+  } else {
+    // Fallback to global setting if client doesn't have custom prompt
+    const globalPrompt = await storage.getSetting('ai_prompt');
+    if (globalPrompt) {
+      promptTemplate = globalPrompt;
+    }
+  }
   
   // Replace template variables with actual values
   const prompt = promptTemplate

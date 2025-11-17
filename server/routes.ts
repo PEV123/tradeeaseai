@@ -250,8 +250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const client = await storage.getClient(validated.clientId);
           if (!client) throw new Error("Client not found");
 
-          // Analyze with GPT-5
-          const aiAnalysis = await analyzeReport(validated, imageBase64Array);
+          // Analyze with GPT-5 (using client-specific prompt if available)
+          const aiAnalysis = await analyzeReport(validated, imageBase64Array, validated.clientId);
 
           // Update image descriptions from AI
           const images = await storage.getImagesByReport(report.id);
@@ -722,6 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logoPath,
         brandColor: validated.brandColor,
         formSlug: validated.formSlug,
+        aiPromptTemplate: validated.aiPromptTemplate || null,
         active: validated.active,
       });
 
@@ -769,6 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         logoPath,
         brandColor: validated.brandColor,
         formSlug: validated.formSlug,
+        aiPromptTemplate: validated.aiPromptTemplate || null,
         active: validated.active,
       });
 
@@ -998,8 +1000,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log(`🔄 Regenerating AI analysis for report ${reportId}...`);
 
-          // Analyze with GPT-5
-          const aiAnalysis = await analyzeReport(report.formData, imageBase64Array);
+          // Analyze with GPT-5 (using client-specific prompt if available)
+          const aiAnalysis = await analyzeReport(report.formData, imageBase64Array, report.clientId);
 
           // Update image descriptions from AI
           if (aiAnalysis.photo_documentation?.image_descriptions) {

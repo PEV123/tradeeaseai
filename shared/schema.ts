@@ -23,6 +23,7 @@ export const clients = pgTable("clients", {
   logoPath: varchar("logo_path", { length: 500 }),
   brandColor: varchar("brand_color", { length: 7 }).notNull().default("#E8764B"),
   formSlug: varchar("form_slug", { length: 100 }).notNull().unique(),
+  aiPromptTemplate: text("ai_prompt_template"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -116,6 +117,7 @@ export const clientSchema = z.object({
   logoPath: z.string().nullable(),
   brandColor: z.string(),
   formSlug: z.string(),
+  aiPromptTemplate: z.string().nullable(),
   active: z.boolean(),
   createdAt: z.date(),
 });
@@ -137,6 +139,7 @@ export const insertClientSchema = z.object({
   logoPath: z.string().nullable().optional(),
   brandColor: z.string().regex(/^#[0-9A-F]{6}$/i, "Must be a valid hex color").default("#E8764B"),
   formSlug: z.string().min(3, "Form slug must be at least 3 characters").regex(/^[a-z0-9-]+$/, "Slug must contain only lowercase letters, numbers, and hyphens"),
+  aiPromptTemplate: z.string().nullable().optional(),
   active: z.boolean().default(true),
 });
 

@@ -4,10 +4,11 @@ import { insertClientSchema, type InsertClient, type Client } from "@shared/sche
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Upload, Loader2 } from "lucide-react";
+import { X, Plus, Upload, Loader2, FileText } from "lucide-react";
 import { useState, useRef } from "react";
 
 // Helper function to convert storage paths to public URLs
@@ -52,6 +53,7 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
       notificationDays: client?.notificationDays as any || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
       brandColor: client?.brandColor || "#E8764B",
       formSlug: client?.formSlug || "",
+      aiPromptTemplate: client?.aiPromptTemplate || "",
       active: client?.active ?? true,
     },
   });
@@ -397,6 +399,58 @@ export default function ClientForm({ client, onSubmit, onCancel, isLoading = fal
             <p className="text-sm text-muted-foreground">
               If no days are selected, no reminders will be sent
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle>AI Analysis Prompt</CardTitle>
+              <CardDescription>
+                Customize the AI prompt template used for analyzing site reports and images
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="aiPromptTemplate">AI Prompt Template</Label>
+            <Textarea
+              id="aiPromptTemplate"
+              data-testid="input-ai-prompt-template"
+              {...form.register("aiPromptTemplate")}
+              placeholder="Leave empty to use the default prompt..."
+              rows={15}
+              className="font-mono text-sm"
+              disabled={isLoading}
+            />
+            <p className="text-sm text-muted-foreground">
+              Use template variables: <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;reportDate&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;projectName&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;worksPerformed&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;labourOnSite&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;plantMachinery&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;hoursWorked&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;materialsUsed&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;delaysWeather&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;safetyIncidents&#125;&#125;</code>,{" "}
+              <code className="bg-muted px-1 py-0.5 rounded text-xs">&#123;&#123;imageCount&#125;&#125;</code>
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-card p-4 space-y-3">
+            <p className="text-sm font-medium">Prompt Tips</p>
+            <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
+              <li>Template variables will be replaced with actual values from the report form</li>
+              <li>Ensure the prompt requests JSON output for proper parsing</li>
+              <li>Leave blank to use the default construction industry prompt</li>
+              <li>This prompt will be used for all reports submitted for this client</li>
+            </ul>
           </div>
         </CardContent>
       </Card>
