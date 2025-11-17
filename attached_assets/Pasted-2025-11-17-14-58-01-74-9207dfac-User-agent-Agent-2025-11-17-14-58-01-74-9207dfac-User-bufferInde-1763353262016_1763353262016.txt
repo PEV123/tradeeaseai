@@ -1,0 +1,156 @@
+2025-11-17 14:58:01.74
+9207dfac
+User
+agent: [Agent],
+2025-11-17 14:58:01.74
+9207dfac
+User
+bufferIndex: 0,
+2025-11-17 14:58:01.74
+9207dfac
+User
+code: 404,
+2025-11-17 14:58:01.74
+9207dfac
+User
+writelen: 0,
+2025-11-17 14:58:01.74
+9207dfac
+User
+_events: {
+2025-11-17 14:58:01.74
+9207dfac
+User
+corked: 0,
+2025-11-17 14:58:01.74
+9207dfac
+User
+❌ Failed to download file /replit-objstore-059160fc-5717-472d-8f07-a7b59b0658cf/public/logos/tradease-ai-logo.png: ApiError: No such object: replit-objstore-059160fc-5717-472d-8f07-a7b59b0658cf/public/logos/tradease-ai-logo.png
+2025-11-17 14:58:01.74
+9207dfac
+User
+allowHalfOpen: true,
+2025-11-17 14:58:01.74
+9207dfac
+User
+at PassThrough.emit (node:events:524:28)
+2025-11-17 14:58:01.74
+9207dfac
+User
+data: undefined,
+2025-11-17 14:58:01.74
+9207dfac
+User
+at PassThrough. (/home/runner/workspace/node_modules/retry-request/index.js:183:11)
+2025-11-17 14:58:01.74
+9207dfac
+User
+'content-type': 'text/html; charset=UTF-8',
+2025-11-17 14:58:01.74
+9207dfac
+User
+drain: undefined,
+2025-11-17 14:58:01.74
+9207dfac
+User
+finish: [Array],
+2025-11-17 14:58:01.74
+9207dfac
+User
+end: [Array],
+2025-11-17 14:58:01.74
+9207dfac
+User
+at PassThrough.emit (node:events:536:35)
+2025-11-17 14:58:01.74
+9207dfac
+User
+unpipe: undefined
+2025-11-17 14:58:01.74
+9207dfac
+User
+at Duplexify. (file:///home/runner/workspace/node_modules/@google-cloud/storage/build/esm/src/file.js:1102:22)
+2025-11-17 14:58:01.74
+9207dfac
+User
+readable: [Function: next],
+2025-11-17 14:58:01.74
+9207dfac
+User
+at new ApiError (file:///home/runner/workspace/node_modules/@google-cloud/storage/build/esm/src/nodejs-common/util.js:85:15)
+2025-11-17 14:58:01.74
+9207dfac
+User
+buffer: [],
+2025-11-17 14:58:01.74
+9207dfac
+User
+_eventsCount: 6,
+2025-11-17 14:58:01.74
+9207dfac
+User
+at Duplexify.emit (node:events:524:28)
+2025-11-17 14:58:01.74
+9207dfac
+User
+highWaterMark: 16384,
+2025-11-17 14:58:01.74
+9207dfac
+User
+},
+2025-11-17 14:58:01.74
+9207dfac
+User
+body: [Circular *1],
+2025-11-17 14:58:01.74
+9207dfac
+User
+_readableState: ReadableState {
+2025-11-17 14:58:01.74
+9207dfac
+User
+toJSON: [Function: toJSON],
+2025-11-17 14:58:01.74
+9207dfac
+User
+pendingcb: 0,
+2025-11-17 14:58:01.74
+9207dfac
+User
+response: PassThrough {
+2025-11-17 14:58:01.74
+9207dfac
+User
+statusCode: 404,
+2025-11-17 14:58:01.74
+9207dfac
+User
+headers: {
+2025-11-17 14:58:01.74
+9207dfac
+User
+},
+2025-11-17 14:58:01.74
+9207dfac
+User
+_maxListeners: undefined,
+2025-11-17 14:58:01.74
+9207dfac
+User
+close: [Array],
+2025-11-17 14:58:01.74
+9207dfac
+User
+[Symbol(kState)]: 1091466620,
+2025-11-17 14:58:01.74
+9207dfac
+User
+onwrite: [Function: bound onwrite],
+2025-11-17 14:58:01.74
+9207dfac
+User
+expires: 'Mon, 17 Nov 2025 03:58:01 GMT',
+2025-11-17 14:58:01.90
+9207dfac
+User
+at Duplexify. (file:///home/runner/workspace/node_modules/@google-cloud/storage/build/esm/src/file.js:1102:22)
