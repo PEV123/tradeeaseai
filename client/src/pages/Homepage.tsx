@@ -54,7 +54,7 @@ export default function Homepage() {
               Log your daily construction activities and get professional PDF reports instantly. At job completion, receive a comprehensive spreadsheet with all project details.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Link href="/client/login">
+              <a href="https://www.tradeease.ai/contact" target="_blank" rel="noopener noreferrer">
                 <Button 
                   size="lg" 
                   className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-8 py-6 h-auto"
@@ -63,7 +63,7 @@ export default function Homepage() {
                   Get Started
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ export default function Homepage() {
           <p className="text-xl text-white/80 mb-8">
             Log daily work, get instant reports, and export comprehensive project data when the job is done
           </p>
-          <Link href="/client/login">
+          <a href="https://www.tradeease.ai/contact" target="_blank" rel="noopener noreferrer">
             <Button 
               size="lg" 
               className="bg-orange-600 hover:bg-orange-700 text-white text-lg px-10 py-6 h-auto"
@@ -228,7 +228,7 @@ export default function Homepage() {
               Get Started Now
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-          </Link>
+          </a>
         </div>
       </div>
 
