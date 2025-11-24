@@ -64,6 +64,16 @@ export default function Homepage() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </a>
+              <Link href="/client/login">
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="bg-white/10 backdrop-blur-sm border-white/30 text-white text-lg px-8 py-6 h-auto"
+                  data-testid="button-client-portal-hero"
+                >
+                  Client Portal
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
