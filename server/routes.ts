@@ -1081,7 +1081,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (downloadError) {
         // Fallback to filesystem
         const paths = resolveStoragePaths(report.pdfPath);
-      res.download(paths.filesystemPath, `report-${req.params.id}.pdf`);
+        res.download(paths.filesystemPath, `report-${req.params.id}.pdf`);
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
