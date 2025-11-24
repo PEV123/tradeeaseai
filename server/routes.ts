@@ -89,7 +89,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ========== PUBLIC ROUTES ==========
 
-  // Serve files from object storage with filesystem fallback
+  // Serve files from Bunny CDN or filesystem fallback
   app.get("/storage/*", async (req: Request, res: Response) => {
     try {
       // Extract full path after /storage/
@@ -105,29 +105,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         contentType = 'image/jpeg';
       } else if (storagePath.endsWith('.png')) {
         contentType = 'image/png';
-      } else if (storagePath.endsWith('.pdf')) {
-        contentType = 'application/pdf';
       } else if (storagePath.endsWith('.webp')) {
         contentType = 'image/webp';
+      } else if (storagePath.endsWith('.pdf')) {
+        contentType = 'application/pdf';
       }
       
       // Resolve storage paths using unified helper
       const paths = resolveStoragePaths(storagePath);
       
-      // Try object storage first (if path provided)
-      if (paths.objectPath) {
-        try {
-          const fileBuffer = await downloadFile(paths.objectPath);
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Cache-Control', 'public, max-age=31536000');
-          res.send(fileBuffer);
-          return;
-        } catch (objectError) {
-          // Fall through to filesystem fallback
-        }
+      // If CDN URL exists, redirect to Bunny CDN for better performance
+      if (paths.cdnUrl) {
+        return res.redirect(paths.cdnUrl);
       }
       
-      // Filesystem fallback
+      // Filesystem fallback (development only)
       const localPath = path.join(process.cwd(), paths.filesystemPath);
       try {
         await fs.access(localPath);
@@ -136,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.setHeader('Cache-Control', 'public, max-age=31536000');
         res.send(fileBuffer);
       } catch (fsError) {
-        console.log(`File not found in object storage or filesystem: ${storagePath}`);
+        console.log(`File not found in Bunny CDN or filesystem: ${storagePath}`);
         res.status(404).json({ error: 'File not found' });
       }
     } catch (error: any) {
@@ -565,31 +557,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('[PDF Download] PDF path from DB:', report.pdfPath);
 
-      // Download from object storage or local filesystem using unified helper
+      // Download from Bunny CDN or local filesystem using unified helper
       try {
-        const paths = resolveStoragePaths(report.pdfPath);
+        console.log('[PDF Download] Loading PDF:', report.pdfPath);
         
-        // Try object storage first
-        if (paths.objectPath) {
-          try {
-            console.log('[PDF Download] Loading from object storage...');
-            const pdfBuffer = await downloadFile(paths.objectPath);
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="report-${report.id}.pdf"`);
-            res.send(pdfBuffer);
-            return;
-          } catch (objectError) {
-            // Fall through to filesystem
-          }
+        // Try to download (handles both Bunny CDN and filesystem)
+        try {
+          const pdfBuffer = await downloadFile(report.pdfPath);
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', `attachment; filename="report-${report.id}.pdf"`);
+          res.send(pdfBuffer);
+          return;
+        } catch (downloadError) {
+          // Fallback to direct filesystem access
+          const paths = resolveStoragePaths(report.pdfPath);
+          const pdfFilePath = path.isAbsolute(paths.filesystemPath) 
+            ? paths.filesystemPath 
+            : path.join(process.cwd(), paths.filesystemPath);
+          console.log('[PDF Download] Loading from filesystem:', pdfFilePath);
+          await fs.access(pdfFilePath);
+          res.download(pdfFilePath, `report-${report.id}.pdf`);
         }
-        
-        // Filesystem fallback
-        const pdfFilePath = path.isAbsolute(paths.filesystemPath) 
-          ? paths.filesystemPath 
-          : path.join(process.cwd(), paths.filesystemPath);
-        console.log('[PDF Download] Loading from filesystem:', pdfFilePath);
-        await fs.access(pdfFilePath);
-        res.download(pdfFilePath, `report-${report.id}.pdf`);
       } catch (error) {
         console.log('[PDF Download] File not accessible:', error);
         return res.status(404).json({ error: "PDF file not found" });
@@ -1083,23 +1071,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "PDF not found" });
       }
 
-      // Download from object storage or local filesystem using unified helper
-      const paths = resolveStoragePaths(report.pdfPath);
-      
-      // Try object storage first
-      if (paths.objectPath) {
-        try {
-          const pdfBuffer = await downloadFile(paths.objectPath);
-          res.setHeader('Content-Type', 'application/pdf');
-          res.setHeader('Content-Disposition', `attachment; filename="report-${req.params.id}.pdf"`);
-          res.send(pdfBuffer);
-          return;
-        } catch (objectError) {
-          // Fall through to filesystem
-        }
-      }
-      
-      // Filesystem fallback
+      // Download from Bunny CDN or local filesystem using unified helper
+      try {
+        const pdfBuffer = await downloadFile(report.pdfPath);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="report-${req.params.id}.pdf"`);
+        res.send(pdfBuffer);
+        return;
+      } catch (downloadError) {
+        // Fallback to filesystem
+        const paths = resolveStoragePaths(report.pdfPath);
       res.download(paths.filesystemPath, `report-${req.params.id}.pdf`);
     } catch (error: any) {
       res.status(500).json({ error: error.message });

@@ -13,17 +13,13 @@ export async function generatePDF(
   const imagesWithBase64 = await Promise.all(
     images.map(async (img) => {
       try {
-        // Resolve storage paths using unified helper
+        // Try to download the file (handles both Bunny CDN and filesystem)
         let imageBuffer: Buffer;
-        const paths = resolveStoragePaths(img.filePath);
-        if (paths.objectPath) {
-          try {
-            imageBuffer = await downloadFile(paths.objectPath);
-          } catch {
-            const imagePath = path.join(process.cwd(), paths.filesystemPath);
-            imageBuffer = await fs.readFile(imagePath);
-          }
-        } else {
+        try {
+          imageBuffer = await downloadFile(img.filePath);
+        } catch {
+          // Fallback to direct filesystem read
+          const paths = resolveStoragePaths(img.filePath);
           const imagePath = path.join(process.cwd(), paths.filesystemPath);
           imageBuffer = await fs.readFile(imagePath);
         }
@@ -49,17 +45,13 @@ export async function generatePDF(
   let logoBase64 = '';
   if (client.logoPath) {
     try {
-      // Resolve storage paths using unified helper
+      // Try to download the file (handles both Bunny CDN and filesystem)
       let logoBuffer: Buffer;
-      const paths = resolveStoragePaths(client.logoPath);
-      if (paths.objectPath) {
-        try {
-          logoBuffer = await downloadFile(paths.objectPath);
-        } catch {
-          const logoPath = path.join(process.cwd(), paths.filesystemPath);
-          logoBuffer = await fs.readFile(logoPath);
-        }
-      } else {
+      try {
+        logoBuffer = await downloadFile(client.logoPath);
+      } catch {
+        // Fallback to direct filesystem read
+        const paths = resolveStoragePaths(client.logoPath);
         const logoPath = path.join(process.cwd(), paths.filesystemPath);
         logoBuffer = await fs.readFile(logoPath);
       }
@@ -139,7 +131,7 @@ export async function generatePDF(
   await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
   // Generate PDF to buffer
-  const pdfBuffer = await page.pdf({
+  const pdfUint8Array = await page.pdf({
     format: 'A4',
     printBackground: true,
     margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' }
@@ -147,7 +139,10 @@ export async function generatePDF(
 
   await browser.close();
 
-  // Upload PDF to object storage
+  // Convert Uint8Array to Buffer
+  const pdfBuffer = Buffer.from(pdfUint8Array);
+
+  // Upload PDF to Bunny CDN or filesystem
   const pdfFileName = `${report.id}.pdf`;
   const pdfPath = await uploadFile(
     `pdfs/${pdfFileName}`,

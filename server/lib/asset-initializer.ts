@@ -1,4 +1,5 @@
-import { uploadFile, fileExists, normalizeObjectStoragePath } from "./storage-service.js";
+import { uploadFile } from "./storage-service.js";
+import { isBunnyConfigured } from "./bunny-storage.js";
 import fs from "fs/promises";
 import path from "path";
 
@@ -21,23 +22,17 @@ export async function initializeBrandAssets(): Promise<void> {
 
   for (const asset of BRAND_ASSETS) {
     try {
-      const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+      const bunnyConfigured = isBunnyConfigured();
       
-      if (bucketId) {
-        const fullPath = `public/${asset.storagePath}`;
-        const objectPath = normalizeObjectStoragePath(fullPath);
-        const exists = await fileExists(objectPath);
-
-        if (!exists) {
-          console.log(`📤 Uploading ${asset.storagePath} to object storage...`);
-          const sourceFullPath = path.join(process.cwd(), asset.sourcePath);
-          const buffer = await fs.readFile(sourceFullPath);
-          await uploadFile(asset.storagePath, buffer, asset.contentType);
-          console.log(`✅ Uploaded ${asset.storagePath}`);
-        } else {
-          console.log(`✓ ${asset.storagePath} already exists in object storage`);
-        }
+      if (bunnyConfigured) {
+        // Upload to Bunny CDN
+        console.log(`📤 Uploading ${asset.storagePath} to Bunny CDN...`);
+        const sourceFullPath = path.join(process.cwd(), asset.sourcePath);
+        const buffer = await fs.readFile(sourceFullPath);
+        await uploadFile(asset.storagePath, buffer, asset.contentType);
+        console.log(`✅ Uploaded ${asset.storagePath} to Bunny CDN`);
       } else {
+        // Copy to local filesystem (development mode)
         const sourceFullPath = path.join(process.cwd(), asset.sourcePath);
         const destPath = path.join(process.cwd(), "storage", asset.storagePath);
         const destDir = path.dirname(destPath);

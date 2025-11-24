@@ -1,52 +1,9 @@
-// Simple object storage service for storing images, logos, and PDFs
-// Reference: javascript_object_storage blueprint from Replit
-import { Storage, File } from "@google-cloud/storage";
+// Storage service for storing images, logos, and PDFs
+// Now using Bunny CDN for production storage
 import { posix } from "path";
 import { promises as fs } from "fs";
 import path from "path";
-
-const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-
-// Initialize Google Cloud Storage client for Replit
-export const storageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
-
-/**
- * Parse object path into bucket name and object name
- * Format: /bucket-name/path/to/file.ext
- */
-function parseObjectPath(path: string): {
-  bucketName: string;
-  objectName: string;
-} {
-  if (!path.startsWith("/")) {
-    path = `/${path}`;
-  }
-  const pathParts = path.split("/");
-  if (pathParts.length < 3) {
-    throw new Error("Invalid path: must contain at least a bucket name");
-  }
-
-  const bucketName = pathParts[1];
-  const objectName = pathParts.slice(2).join("/");
-
-  return { bucketName, objectName };
-}
+import { uploadToBunny, downloadFromBunny, deleteFromBunny, getBunnyCDNUrl, isBunnyConfigured } from "./bunny-storage";
 
 /**
  * Sanitize file path to prevent path traversal attacks
@@ -76,31 +33,31 @@ function sanitizeFilePath(filePath: string): string {
 }
 
 /**
- * Upload a file buffer to object storage or filesystem fallback
- * @param filePath - Path relative to bucket (e.g., "images/report-123.jpg")
+ * Upload a file buffer to Bunny CDN or filesystem fallback
+ * @param filePath - Path relative to storage root (e.g., "images/report-123.jpg")
  * @param buffer - File buffer to upload
  * @param contentType - MIME type (e.g., "image/jpeg")
- * @returns Full path in object storage or filesystem
+ * @returns Full path for storage reference (e.g., "bunny/images/file.jpg" or "storage/images/file.jpg")
  */
 export async function uploadFile(
   filePath: string,
   buffer: Buffer,
   contentType: string
 ): Promise<string> {
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   const isProduction = process.env.NODE_ENV === "production";
+  const bunnyConfigured = isBunnyConfigured();
 
-  // In production, require object storage (deployed apps have ephemeral filesystems)
-  if (!bucketId && isProduction) {
+  // In production, require Bunny CDN (deployed apps have ephemeral filesystems)
+  if (!bunnyConfigured && isProduction) {
     throw new Error(
-      "Object storage is required for production deployments. " +
-      "Please configure DEFAULT_OBJECT_STORAGE_BUCKET_ID environment variable."
+      "Bunny CDN is required for production deployments. " +
+      "Please configure BUNNY_STORAGE_ZONE_NAME, BUNNY_STORAGE_API_KEY, and BUNNY_CDN_PULL_ZONE_URL."
     );
   }
 
   // Fall back to filesystem in development only
-  if (!bucketId) {
-    console.log(`⚠️ Object storage not configured, using filesystem fallback for: ${filePath}`);
+  if (!bunnyConfigured) {
+    console.log(`⚠️ Bunny CDN not configured, using filesystem fallback for: ${filePath}`);
     console.log(`⚠️ WARNING: Filesystem storage is for development only. Files will not persist on deployed apps.`);
     
     // Sanitize the file path to prevent path traversal attacks
@@ -124,21 +81,16 @@ export async function uploadFile(
     return `storage/${sanitizedPath}`;
   }
 
-  // Use object storage
+  // Use Bunny CDN
   try {
-    const bucketName = bucketId;
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(`public/${filePath}`);
-
-    // Upload the buffer (no public ACL - access controlled by bucket IAM)
-    await file.save(buffer, {
-      metadata: {
-        contentType,
-      },
+    await uploadToBunny({
+      remotePath: filePath,
+      buffer,
+      contentType,
     });
 
-    console.log(`✅ Uploaded file to object storage: public/${filePath}`);
-    return `public/${filePath}`;
+    console.log(`✅ Uploaded file to Bunny CDN: ${filePath}`);
+    return `bunny/${filePath}`;
   } catch (error) {
     console.error(`❌ Failed to upload file ${filePath}:`, error);
     throw error;
@@ -146,94 +98,77 @@ export async function uploadFile(
 }
 
 /**
- * Download a file from object storage as a buffer
- * @param filePath - Full path in object storage (e.g., "/bucket-id/public/images/file.jpg")
+ * Download a file from Bunny CDN or filesystem as a buffer
+ * @param storagePath - Storage path (e.g., "bunny/images/file.jpg" or "storage/images/file.jpg")
  * @returns File buffer
  */
-export async function downloadFile(filePath: string): Promise<Buffer> {
+export async function downloadFile(storagePath: string): Promise<Buffer> {
   try {
-    const { bucketName, objectName } = parseObjectPath(filePath);
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-
-    const [buffer] = await file.download();
-    return buffer;
-  } catch (error) {
-    console.error(`❌ Failed to download file ${filePath}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Check if a file exists in object storage
- */
-export async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    const { bucketName, objectName } = parseObjectPath(filePath);
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-    const [exists] = await file.exists();
-    return exists;
-  } catch (error) {
-    console.error(`❌ Failed to check file existence ${filePath}:`, error);
-    return false;
-  }
-}
-
-/**
- * Delete a file from object storage
- */
-export async function deleteFile(filePath: string): Promise<void> {
-  try {
-    const { bucketName, objectName } = parseObjectPath(filePath);
-    const bucket = storageClient.bucket(bucketName);
-    const file = bucket.file(objectName);
-    await file.delete();
-    console.log(`🗑️  Deleted file from object storage: ${filePath}`);
-  } catch (error) {
-    console.error(`❌ Failed to delete file ${filePath}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Normalize storage path to fully-qualified object storage path
- * Handles legacy, new object storage formats, and gracefully passes through filesystem paths
- * @param storagePath - Path from database (e.g., "public/images/file.jpg", "/bucket-id/public/images/file.jpg", or "storage/images/file.jpg")
- * @returns Fully-qualified path for object storage operations or original path for filesystem
- */
-export function normalizeObjectStoragePath(storagePath: string): string {
-  // Already fully-qualified (legacy object storage format)
-  if (storagePath.startsWith('/')) {
-    return storagePath;
-  }
-  
-  // New object storage format - prepend bucket ID
-  if (storagePath.startsWith('public/')) {
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) {
-      // Gracefully passthrough if bucket not configured (dev/local mode)
-      // Caller will treat as filesystem path and fall back to fs.readFile()
-      return storagePath;
+    // Bunny CDN path
+    if (storagePath.startsWith('bunny/')) {
+      const remotePath = storagePath.substring(6); // Remove "bunny/" prefix
+      return await downloadFromBunny({ remotePath });
     }
-    return `/${bucketId}/${storagePath}`;
+    
+    // Filesystem path
+    if (storagePath.startsWith('storage/')) {
+      const fullPath = path.join(process.cwd(), storagePath);
+      return await fs.readFile(fullPath);
+    }
+    
+    // Legacy format - try both
+    console.warn(`Legacy storage path format: ${storagePath}`);
+    const fullPath = path.join(process.cwd(), 'storage', storagePath);
+    return await fs.readFile(fullPath);
+  } catch (error) {
+    console.error(`❌ Failed to download file ${storagePath}:`, error);
+    throw error;
   }
-  
-  // Local filesystem path (e.g., "storage/images/file.jpg") - passthrough unchanged
-  // Caller should handle filesystem vs object storage logic
-  return storagePath;
+}
+
+/**
+ * Delete a file from Bunny CDN or filesystem
+ * @param storagePath - Storage path (e.g., "bunny/images/file.jpg" or "storage/images/file.jpg")
+ */
+export async function deleteFile(storagePath: string): Promise<void> {
+  try {
+    // Bunny CDN path
+    if (storagePath.startsWith('bunny/')) {
+      const remotePath = storagePath.substring(6); // Remove "bunny/" prefix
+      await deleteFromBunny(remotePath);
+      console.log(`🗑️  Deleted file from Bunny CDN: ${remotePath}`);
+      return;
+    }
+    
+    // Filesystem path
+    if (storagePath.startsWith('storage/')) {
+      const fullPath = path.join(process.cwd(), storagePath);
+      await fs.unlink(fullPath);
+      console.log(`🗑️  Deleted file from filesystem: ${storagePath}`);
+      return;
+    }
+    
+    // Legacy format
+    console.warn(`Legacy storage path format: ${storagePath}`);
+    const fullPath = path.join(process.cwd(), 'storage', storagePath);
+    await fs.unlink(fullPath);
+    console.log(`🗑️  Deleted file from filesystem: ${storagePath}`);
+  } catch (error) {
+    console.error(`❌ Failed to delete file ${storagePath}:`, error);
+    throw error;
+  }
 }
 
 /**
  * Unified path resolution for storage paths
- * Returns both object storage path (if bucket configured) and filesystem fallback path
+ * Returns both Bunny CDN URL (if configured) and filesystem fallback path
  * 
- * @param storagePath - Path from database or URL (e.g., "public/images/file.jpg", "/bucket/public/...", "storage/...")
- * @returns { objectPath?: string; filesystemPath: string }
+ * @param storagePath - Path from database (e.g., "bunny/images/file.jpg", "storage/images/file.jpg")
+ * @returns { cdnUrl?: string; filesystemPath: string }
  * @throws Error if path contains traversal attempts
  */
-export function resolveStoragePaths(storagePath: string): { objectPath?: string; filesystemPath: string } {
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+export function resolveStoragePaths(storagePath: string): { cdnUrl?: string; filesystemPath: string } {
+  const bunnyConfigured = isBunnyConfigured();
   
   // Sanitize and normalize path
   let sanitized = storagePath.replace(/\\/g, '/');
@@ -244,22 +179,15 @@ export function resolveStoragePaths(storagePath: string): { objectPath?: string;
     throw new Error('Path traversal not allowed');
   }
   
-  // Determine object storage path
-  let objectPath: string | undefined;
+  // Determine CDN URL
+  let cdnUrl: string | undefined;
   
-  // Always preserve fully-qualified paths (regardless of env var)
-  if (sanitized.startsWith('/')) {
-    objectPath = sanitized;
-  } else if (bucketId) {
-    // Generate object path only when bucket configured
-    if (sanitized.startsWith('public/')) {
-      // New format: "public/..." → "/bucket/public/..."
-      objectPath = `/${bucketId}/${sanitized}`;
-    } else if (!sanitized.startsWith('storage/')) {
-      // URL format: "images/..." → "/bucket/public/images/..."
-      objectPath = `/${bucketId}/public/${sanitized}`;
+  // Bunny CDN path format: "bunny/images/file.jpg"
+  if (sanitized.startsWith('bunny/')) {
+    const remotePath = sanitized.substring(6); // Remove "bunny/" prefix
+    if (bunnyConfigured) {
+      cdnUrl = getBunnyCDNUrl(remotePath);
     }
-    // If starts with "storage/", no object path (filesystem only)
   }
   
   // Determine filesystem path
@@ -267,58 +195,39 @@ export function resolveStoragePaths(storagePath: string): { objectPath?: string;
   if (sanitized.startsWith('storage/')) {
     // Already filesystem format
     filesystemPath = sanitized;
-  } else if (sanitized.startsWith('/')) {
-    // Extract from fully-qualified object storage path
-    // Try to match "/bucket/public/..." format
-    const publicMatch = sanitized.match(/\/[^\/]+\/public\/(.+)$/);
-    if (publicMatch) {
-      // "/bucket/public/images/..." → "storage/images/..."
-      filesystemPath = `storage/${publicMatch[1]}`;
-    } else {
-      // Path like "/bucket/foo.pdf" without public/ - extract after first /
-      const pathWithoutBucket = sanitized.substring(sanitized.indexOf('/', 1) + 1);
-      filesystemPath = pathWithoutBucket ? `storage/${pathWithoutBucket}` : 'storage/unknown';
-    }
-  } else if (sanitized.startsWith('public/')) {
-    // Convert: "public/images/..." → "storage/images/..."
-    filesystemPath = 'storage/' + sanitized.substring(7);
+  } else if (sanitized.startsWith('bunny/')) {
+    // Convert: "bunny/images/..." → "storage/images/..."
+    filesystemPath = 'storage/' + sanitized.substring(6);
   } else {
-    // URL format: "images/..." → "storage/images/..."
+    // Legacy format: "images/..." → "storage/images/..."
     filesystemPath = `storage/${sanitized}`;
   }
   
-  return { objectPath, filesystemPath };
+  return { cdnUrl, filesystemPath };
 }
 
 /**
  * Helper to convert storage paths to public HTTP URLs
- * Handles both object storage paths and local filesystem paths
+ * Handles both Bunny CDN paths and local filesystem paths
  */
 export function getPublicAssetUrl(baseUrl: string, storagePath: string | null): string {
   if (!storagePath) {
     return '';
   }
   
-  // If path starts with /, it's a legacy object storage path like "/bucket-id/public/logos/file.png"
-  // Convert to HTTP URL: "https://host/storage/logos/file.png"
-  if (storagePath.startsWith('/')) {
-    const match = storagePath.match(/\/[^\/]+\/public\/(.+)$/);
-    if (match) {
-      return `${baseUrl}/storage/${match[1]}`;
+  // Bunny CDN path - return CDN URL directly
+  if (storagePath.startsWith('bunny/')) {
+    const remotePath = storagePath.substring(6); // Remove "bunny/" prefix
+    if (isBunnyConfigured()) {
+      return getBunnyCDNUrl(remotePath);
     }
   }
   
-  // If path starts with "public/", it's a new object storage path like "public/images/file.jpg"
-  // Convert to HTTP URL: "https://host/storage/images/file.jpg"
-  if (storagePath.startsWith('public/')) {
-    return `${baseUrl}/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
-  }
-  
-  // Otherwise it's a local filesystem path like "storage/logos/file.png"
-  // Convert to HTTP URL: "https://host/storage/logos/file.png"
+  // Filesystem path - convert to HTTP URL via app server
   if (storagePath.startsWith('storage/')) {
     return `${baseUrl}/${storagePath}`;
   }
   
+  // Legacy format - assume it's a relative path
   return `${baseUrl}/storage/${storagePath}`;
 }
