@@ -160,7 +160,10 @@ export async function deleteFromBunny(remotePath: string): Promise<void> {
  * @returns string - The public CDN URL
  */
 export function getBunnyCDNUrl(remotePath: string): string {
-  return `${CDN_URL}/${remotePath}`;
+  // Ensure CDN_URL doesn't end with slash and remotePath doesn't start with one
+  const baseUrl = CDN_URL.endsWith('/') ? CDN_URL.slice(0, -1) : CDN_URL;
+  const path = remotePath.startsWith('/') ? remotePath.substring(1) : remotePath;
+  return `${baseUrl}/${path}`;
 }
 
 /**

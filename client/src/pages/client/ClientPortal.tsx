@@ -125,7 +125,7 @@ export default function ClientPortal({ clientId, client, onLogout }: ClientPorta
             <div className="flex items-center gap-4">
               {client.logoPath ? (
                 <img 
-                  src={`/${client.logoPath}`} 
+                  src={`/storage/${client.logoPath}`} 
                   alt={client.name}
                   className="h-12 w-auto object-contain"
                   data-testid="img-client-logo"

@@ -9,16 +9,15 @@ import { format } from "date-fns";
 
 // Helper function to convert storage paths to public URLs
 function getStorageUrl(storagePath: string): string {
-  // If path starts with "public/", convert to "/storage/" route
-  if (storagePath.startsWith('public/')) {
-    return `/storage/${storagePath.substring(7)}`; // Remove "public/" prefix
+  // If path already starts with "http", it's a full URL
+  if (storagePath.startsWith('http')) {
+    return storagePath;
   }
-  // If path starts with "storage/", use as-is with leading slash
-  if (storagePath.startsWith('storage/')) {
-    return `/${storagePath}`;
+  // All storage paths should go through /storage/ route (which redirects to Bunny CDN)
+  if (storagePath.startsWith('/')) {
+    return `/storage${storagePath}`;
   }
-  // Otherwise, assume it's a relative path and prepend slash
-  return `/${storagePath}`;
+  return `/storage/${storagePath}`;
 }
 
 type ReportForView = Omit<ReportWithClient, 'images'> & {
