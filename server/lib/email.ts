@@ -23,19 +23,13 @@ export async function sendReportEmail(
 ): Promise<void> {
   // Import storage to fetch email template settings
   const { storage } = await import("../storage");
-  // Resolve storage paths using unified helper
+  // Download PDF using unified helper (handles both Bunny CDN and filesystem)
   let pdfBuffer: Buffer;
-  const paths = resolveStoragePaths(pdfPath);
-  if (paths.objectPath) {
-    try {
-      pdfBuffer = await downloadFile(paths.objectPath);
-    } catch {
-      const fullPath = path.isAbsolute(paths.filesystemPath) 
-        ? paths.filesystemPath 
-        : path.join(process.cwd(), paths.filesystemPath);
-      pdfBuffer = await fs.readFile(fullPath);
-    }
-  } else {
+  try {
+    pdfBuffer = await downloadFile(pdfPath);
+  } catch {
+    // Fallback to direct filesystem read
+    const paths = resolveStoragePaths(pdfPath);
     const fullPath = path.isAbsolute(paths.filesystemPath) 
       ? paths.filesystemPath 
       : path.join(process.cwd(), paths.filesystemPath);

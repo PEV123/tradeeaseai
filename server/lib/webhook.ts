@@ -232,19 +232,13 @@ export async function sendToWebhook(payload: WebhookPayload): Promise<void> {
 
     const form = new FormData();
     
-    // Resolve storage paths using unified helper
+    // Download PDF using unified helper (handles both Bunny CDN and filesystem)
     let pdfBuffer: Buffer;
-    const paths = resolveStoragePaths(payload.pdfPath);
-    if (paths.objectPath) {
-      try {
-        pdfBuffer = await downloadFile(paths.objectPath);
-      } catch {
-        const fullPath = path.isAbsolute(paths.filesystemPath) 
-          ? paths.filesystemPath 
-          : path.join(process.cwd(), paths.filesystemPath);
-        pdfBuffer = await fs.readFile(fullPath);
-      }
-    } else {
+    try {
+      pdfBuffer = await downloadFile(payload.pdfPath);
+    } catch {
+      // Fallback to direct filesystem read
+      const paths = resolveStoragePaths(payload.pdfPath);
       const fullPath = path.isAbsolute(paths.filesystemPath) 
         ? paths.filesystemPath 
         : path.join(process.cwd(), paths.filesystemPath);
