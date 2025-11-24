@@ -24,8 +24,15 @@ Preferred communication style: Simple, everyday language.
 - **API**: RESTful endpoints categorized by public, admin, and client portal access.
 
 ### Data Storage
-- **Persistence**: Replit Object Storage for deployed apps; local filesystem fallback for development.
-- **Locations**: Cloud bucket (or local `/storage`) for `logos`, `images`, `pdfs`.
+- **Persistence**: Bunny CDN (Sydney region) for production storage; local filesystem fallback for development.
+- **CDN URL**: https://tradeease.b-cdn.net/
+- **Storage Paths**: Canonical paths stored in database (e.g., `images/report-123.jpg`, `logos/client-456.png`, `pdfs/report-789.pdf`)
+- **Backward Compatibility**: Legacy prefixed paths (`bunny/...`, `storage/...`) automatically normalized to canonical format
+- **Architecture**:
+  - `server/lib/bunny-storage.ts`: HTTPS-based Bunny CDN API integration (upload, download, delete)
+  - `server/lib/storage-service.ts`: Unified storage service with automatic Bunny CDN/filesystem fallback
+  - Automatic path normalization for backward compatibility with legacy data
+- **Configuration**: Uses environment variables (`BUNNY_STORAGE_ZONE_NAME`, `BUNNY_STORAGE_API_KEY`, `BUNNY_CDN_PULL_ZONE_URL`)
 - **Data Models**: Defined with Zod schemas for type-safe validation across client and server.
 
 ### AI Integration
