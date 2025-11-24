@@ -45,7 +45,7 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
       hoursWorked: "",
       materialsUsed: "",
       delaysWeather: "",
-      safetyIncidents: "None reported",
+      safetyIncidents: "",
     },
   });
 
@@ -302,7 +302,7 @@ export default function SiteReportForm({ client }: SiteReportFormProps) {
                   id="safetyIncidents"
                   {...form.register("safetyIncidents")}
                   disabled={isSubmitting}
-                  placeholder="Report any incidents, near misses, or safety observations..."
+                  placeholder="Note any incidents that occurred today..."
                   rows={3}
                   data-testid="textarea-safety"
                 />
